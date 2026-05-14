@@ -1,30 +1,37 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:isar/isar.dart';
 import 'package:echoscript/main.dart';
+import 'package:echoscript/features/history/domain/models/audio_chunk.dart';
+import 'package:echoscript/features/settings/domain/models/app_settings.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('EchoScript Dashboard smoke test', (WidgetTester tester) async {
+    // Set a larger surface size to avoid RenderFlex overflow in tests
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const EchoScriptApp());
+    // Note: We don't initialize Isar here because the main dashboard 
+    // uses it via StreamBuilders, and we can override providers if needed.
+    // For a basic smoke test, we just want to see if the UI builds.
+    
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: EchoScriptApp(),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Verify that our app title or key elements are present.
+    expect(find.text('ECHOSCRIPT'), findsOneWidget);
+    expect(find.text('Intelligence Unit'), findsOneWidget);
+    
+    // Verify recording controller exists
+    expect(find.byIcon(Icons.mic_rounded), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Clean up
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
   });
 }
