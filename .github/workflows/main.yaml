@@ -36,6 +36,14 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
         
+      - name: Patch broken dependencies
+        run: |
+          # isar_flutter_libs 3.1.0+1 has a package attribute in its AndroidManifest.xml 
+          # which conflicts with the namespace requirement in AGP 8+.
+          find ${{ env.PUB_CACHE }} -name "AndroidManifest.xml" -path "*/isar_flutter_libs*/android/src/main/AndroidManifest.xml" -exec sed -i 's/package="dev.isar.isar_flutter_libs"//g' {} +
+        env:
+          PUB_CACHE: /home/runner/.pub-cache
+
       - name: Code Generation
         run: flutter pub run build_runner build --delete-conflicting-outputs
         
