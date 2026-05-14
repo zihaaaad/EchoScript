@@ -1,29 +1,46 @@
-# EchoScript - Enterprise Audio Intelligence
+# EchoScript - Enterprise Documentation
 
-EchoScript is a robust, 24/7 audio recording and transcription platform designed for high-reliability environments. 
+EchoScript is a robust, 24/7 audio recording and transcription platform designed for high-reliability environments. This documentation provides a technical overview of the system's internal mechanics and operational procedures.
 
-## Architecture
-- **Clean Architecture:** Strict separation between Data, Domain, and Presentation layers.
-- **MVVM Pattern:** State management handled by Riverpod for reactive and testable UI.
-- **Offline First:** Local Isar Database acts as a persistent queue, ensuring no data loss during network outages.
+## 🏗️ Architectural Blueprint
+EchoScript is engineered using **Clean Architecture** to ensure that business logic remains decoupled from external frameworks like Flutter or Isar.
 
-## Core Features
-- **Continuous Recording:** 30-minute chunking logic for infinite recording capability.
-- **Audio Gain Control:** Software-based gain adjustment from -12dB to +24dB.
-- **Gemini AI Integration:** Automated transcription using Google's latest Generative AI models.
-- **Background Persistence:** Android Foreground Service with microphone permissions for uninterrupted service.
+### Layer Responsibility:
+- **Presentation Layer (`lib/features/*/presentation`)**: Uses Riverpod for state management. Ensures the UI is a pure reflection of the underlying state.
+- **Domain Layer (`lib/features/*/domain`)**: Contains pure Dart models and use-cases. This is the heart of the application.
+- **Data Layer (`lib/features/*/data`)**: Implements repositories and datasources. Handles Isar database queries, Hardware Microphone access, and Gemini API calls.
 
-## Security
-- API Keys are stored locally and never transmitted except to the official Gemini API.
-- Audio data is purged locally immediately after successful transcription and confirmation.
+---
 
-## Enterprise Versioning Strategy
-EchoScript utilizes a dual-layer versioning system for maximum professionalism:
-1.  **Semantic Version (SemVer):** Managed in `pubspec.yaml` (e.g., `1.0.0`). This reflects major feature releases and architectural shifts.
-2.  **Dynamic Build Number:** Every CI/CD run injects a unique build number (GitHub Run ID) into the final APK and AppBundle. This ensures that every build is unique and traceable back to a specific commit.
-3.  **Traceability:** The in-app settings display the full version string (e.g., `v1.0.0+42`), allowing users and support teams to identify the exact build in use.
+## ⏺️ Recording Engine & Chunking
+To support 24/7 recording without memory overflow or file corruption, EchoScript employs a **Rotational Chunking Strategy**:
+1.  **30-Minute Cycle:** Every 30 minutes, the `RecordingService` automatically stops the current stream, saves the file, and immediately starts a new one.
+2.  **Gapless Transition:** The switch happens in milliseconds to ensure no spoken words are lost during rotation.
+3.  **WAKE_LOCK & Foreground Service:** The system utilizes `wakelock_plus` and an Android Foreground Service to prevent the OS from killing the process during deep sleep.
 
-## Technical Requirements
-- Android 8.0+ (Oreo) for stable foreground services.
-- Unrestricted Battery Usage permission (recommended).
-- Gemini API Key from Google AI Studio.
+---
+
+## 🤖 AI Transcription Pipeline
+The transcription process is asynchronous and resilient:
+1.  **Local Queue:** Finished chunks are marked as `pending` in the Isar database.
+2.  **Background Processor:** A background timer checks the queue every 60 seconds.
+3.  **Gemini 1.5 Integration:** Audio is transmitted directly to Google's Gemini API for high-fidelity transcription.
+4.  **Hardware DSP:** If specified in settings, the system applies a software-based Gain multiplier to the audio stream before processing, enhancing clarity for distant voices.
+
+---
+
+## 🔒 Security & Data Privacy
+- **Local Sovereignty:** Transcription happens between your device and Google's servers. EchoScript does not use a secondary proxy or "middleman" server.
+- **Auto-Purge Strategy:** To protect user privacy and save disk space, the local `.aac` audio file is **permanently deleted** from the device as soon as a successful transcription is received and stored in the database.
+
+---
+
+## 📦 Deployment & Versioning
+EchoScript uses a sophisticated CI/CD pipeline:
+- **Automated SemVer:** Every push to `main` triggers a build that injects the GitHub Run ID as the build number.
+- **Artifacts:** Releases include both a universal **APK** for easy installation and an **AppBundle (AAB)** for optimized Play Store distribution.
+- **Vaulting:** The `HistoryPage` serves as a secure vault where all past transcriptions are indexed and searchable.
+
+---
+
+*For further technical support or architectural inquiries, please consult the internal team or review the source code in `lib/core/`.*
