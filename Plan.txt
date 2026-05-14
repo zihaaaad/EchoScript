@@ -1,0 +1,95 @@
+Here is a comprehensive architectural analysis and system design document for your application, written from the perspective of an experienced System Architect. 
+
+To make this an **enterprise-grade, error-free** application with a highly organized UI/UX and the new **Audio Gain (dB)** feature, we must adopt a robust architecture (like Clean Architecture) and implement fail-safes at every level.
+
+---
+
+# Enterprise Architecture & System Design: "EchoScript"
+
+## 1. Architectural Principles & Patterns
+To ensure the application is scalable, maintainable, and "error-free," we will use **Clean Architecture** combined with the **MVVM (Model-View-ViewModel)** pattern. We will strictly separate the UI from the background processing logic.
+
+*   **State Management:** **Riverpod** (Provides compile-time safety and prevents memory leaks, essential for an enterprise app).
+*   **Local Database:** Instead of just `shared_preferences` (which is only good for simple settings), we will use **Isar Database** or **SQLite**. We need a proper local database to act as an "Offline Queue" for audio chunks that fail to transcribe due to network issues.
+*   **Platform Focus:** Due to strict iOS background execution policies, this architecture is heavily optimized for **Android Foreground Services** (using `Wakelocks` and `Ignore Battery Optimization` permissions) to ensure continuous 24/7 recording.
+
+---
+
+## 2. Core Modules & Error-Free Mechanisms
+
+### A. The Audio Engine & Microphone Gain (dB) Logic
+To implement the **Gain (dB) adjustment**, we cannot rely on basic recorders. We need digital signal processing (DSP) or an advanced audio library.
+*   **Implementation:** We will use `flutter_sound` or a custom platform channel (Kotlin/C++) that can apply a software gain multiplier to the PCM audio stream before encoding it to an `M4A/AAC` file.
+*   **Audio Format:** `AAC` encoding at `16kHz` or `32kHz`. This is highly optimized for speech recognition, keeps the 30-minute chunk under 5-8 MB, and saves RAM.
+*   **Crash Prevention:** Audio streams will be written to disk in real-time (streamed), not held in RAM, preventing `OutOfMemory (OOM)` errors.
+
+### B. Robust Job Queue & Auto-Retry Mechanism (The "Error-Free" Layer)
+Network requests to Gemini AI *will* fail occasionally (timeouts, API limits, no internet). An enterprise app never loses user data.
+*   **The Queue:** When a 30-minute audio chunk is saved, its metadata is written to the local database with a status: `PENDING`.
+*   **The Worker:** A background worker picks up `PENDING` files and sends them to the Gemini API.
+*   **Exponential Backoff:** If the API fails, the worker waits 1 minute, then 2, then 4, etc., before retrying.
+*   **Atomic Cleanup:** Only when the database receives a `200 OK` from Gemini and the text file is successfully written to disk, will the system execute the hard deletion of the source audio file.
+
+---
+
+## 3. UI / UX Design System (Enterprise Minimalist)
+
+An enterprise application must look clean, intuitive, and trustworthy. We will follow **Material Design 3** principles with a focus on dark/light mode optimization.
+
+### 1. Dashboard (Home Screen)
+*   **Visual Anchor:** A large, elegant, floating Action Button (FAB) or central ring to toggle Recording ON/OFF. It pulses softly when recording.
+*   **Live Audio Visualizer:** A dynamic, subtle waveform animation to confirm the mic is picking up sound.
+*   **Live Status Panel:**
+    *   *Uptime:* "Recording for: 02h 15m"
+    *   *Queue Status:* "Transcribing chunk 4...", "2 Chunks in Pending Queue (Offline)".
+*   **Quick Analytics:** Small cards showing "Files Transcribed Today" and "Storage Saved".
+
+### 2. Audio & AI Configurator (Settings Screen)
+*   **API Key Field:** Secure text field (obscured like a password `••••••••`) with a "Test Connection" button.
+*   **Model Selector:** Clean dropdown (`Gemini-1.5-Flash` / `Gemini-1.5-Pro`).
+*   **Audio Gain Controller (New Feature):**
+    *   A sleek horizontal slider ranging from `-12 dB` to `+24 dB`.
+    *   A real-time decibel meter (a color-coded bar: Green -> Yellow -> Red) below the slider so users can test their voice and set the perfect gain without clipping/distortion.
+*   **System Instructions (Prompt Engineer):** A multiline text field with a reset-to-default button.
+
+### 3. Transcript Vault (Files Screen)
+*   **List View:** Grouped by Date (e.g., "Today", "Yesterday").
+*   **Search & Filter:** Search bar to find specific keywords across all offline transcripts.
+*   **Card Design:** Each list item shows the Start/End time, duration, and a 2-line snippet of the transcription.
+*   **Actions:** Tap to read full text, swipe left to delete, swipe right to share (Export as `.txt` or `.pdf`).
+
+---
+
+## 4. Technical Flowchart (The 30-Minute Cycle)
+
+1.  **Start:** User clicks "Record". Foreground service activates.
+2.  **Mic Capture:** Audio stream flows through the **Gain Multiplier (dB adjustment)** -> Encoded to AAC -> Written to `chunk_timestamp_01.m4a`.
+3.  **Chunking:** At 29m:59s, the stream stops writing to `chunk...01` and instantly redirects to `chunk...02`.
+4.  **Queue Execution:** 
+    *   `chunk...01` is marked as `READY_FOR_AI`.
+    *   Background HTTP client sends it to Gemini API.
+5.  **Success Path:** Gemini returns text -> App writes text to `Vault/date_time.txt` -> App deletes `chunk...01.m4a`.
+6.  **Fail Path (No Internet):** App detects no connection -> keeps `chunk...01.m4a` -> checks connection every 15 minutes.
+
+---
+
+## 5. CI/CD Implementation (GitHub Actions)
+
+To maintain an enterprise standard, we will set up a robust GitHub Actions Pipeline (`.github/workflows/main.yaml`):
+
+1.  **Code Quality Check:** Runs `flutter analyze` to ensure zero syntax errors or bad practices.
+2.  **Automated Tests:** Runs `flutter test` (Unit tests for the audio queue and retry logic).
+3.  **Build APK & AppBundle:** 
+    *   Generates an optimized `--release` APK.
+    *   Generates an `.aab` file for the Play Store.
+4.  **Auto-Release:** Uses GitHub Releases API to automatically create a release tag (e.g., `v1.0.5`) and attach the APK.
+
+---
+
+## 6. Architect's Recommendations for "Error-Free" Execution
+
+1.  **Battery Killers (The Biggest Threat):** Android OS aggressively kills background apps. You **must** include a setup screen when the user first opens the app that guides them to device settings to select **"Unrestricted Battery Usage"** for this specific app. Use the `permission_handler` package to request this.
+2.  **API Rate Limits:** Gemini API has Requests-Per-Minute (RPM) limits. Since you are chunking every 30 minutes, you won't hit the RPM limit. However, there are Daily limits. The app should gracefully handle `HTTP 429 Too Many Requests` errors by pausing the queue until the next day.
+3.  **Storage Overflow Monitor:** Add a safety check. If the phone's storage drops below 500 MB, the app must automatically halt recording and alert the user to prevent device crashing.
+
+This architecture ensures that your application is not just a side-project, but a stable, resilient, and enterprise-grade software product.
