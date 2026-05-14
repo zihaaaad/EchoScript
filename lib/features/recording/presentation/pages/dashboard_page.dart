@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
@@ -31,95 +30,64 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // Background Depth
-          Positioned.fill(
-            child: Container(
-              color: AppTheme.background,
-            ),
-          ),
-          Positioned(
-            top: -100,
-            right: -100,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.primary.withValues(alpha: 0.05),
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
-                child: Container(color: Colors.transparent),
-              ),
-            ),
-          ),
-          
-          SafeArea(
-            child: Column(
-              children: [
-                _buildModernAppBar(context),
-                const SizedBox(height: 60),
-                const StatusMonitor(),
-                const Spacer(),
-                const WaveformVisualizer(),
-                const Spacer(),
-                const RecordingController(),
-                const SizedBox(height: 80),
-              ],
-            ),
-          ),
-        ],
+      backgroundColor: AppTheme.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildAppBar(context),
+            const Spacer(),
+            const StatusMonitor(),
+            const Spacer(),
+            const WaveformVisualizer(),
+            const SizedBox(height: 60),
+            const RecordingController(),
+            const SizedBox(height: 60),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildModernAppBar(BuildContext context) {
+  Widget _buildAppBar(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "ECHOSCRIPT",
-                style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 4,
-                  color: AppTheme.primary,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "EchoScript",
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                "Intelligence Unit",
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
+                Text(
+                  "Enterprise Audio Intelligence",
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          Row(
-            children: [
-              _CircularAction(
-                icon: Icons.history_rounded,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const HistoryPage()),
-                ),
-              ),
-              const SizedBox(width: 16),
-              _CircularAction(
-                icon: Icons.tune_rounded,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const SettingsPage()),
-                ),
-              ),
-            ],
+          _ActionIcon(
+            icon: Icons.history_rounded,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => const HistoryPage()),
+            ),
+          ),
+          const SizedBox(width: 12),
+          _ActionIcon(
+            icon: Icons.settings_outlined,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => const SettingsPage()),
+            ),
           ),
         ],
       ),
@@ -127,23 +95,24 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   }
 }
 
-class _CircularAction extends StatelessWidget {
+class _ActionIcon extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  const _CircularAction({required this.icon, required this.onTap});
+  const _ActionIcon({required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.03),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5),
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
-        child: Icon(icon, size: 20, color: Colors.white),
+        child: Icon(icon, size: 20, color: AppTheme.textPrimary),
       ),
     );
   }
@@ -163,48 +132,53 @@ class StatusMonitor extends ConsumerWidget {
         return Column(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: (isActive ? AppTheme.error : AppTheme.success).withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
+                color: (isActive ? AppTheme.error : AppTheme.success).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: (isActive ? AppTheme.error : AppTheme.success).withValues(alpha: 0.2)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _BlinkingDot(color: isActive ? AppTheme.error : AppTheme.success),
-                  const SizedBox(width: 12),
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: isActive ? AppTheme.error : AppTheme.success,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Text(
-                    isActive ? "ACTIVE RECORDING" : "SYSTEM STANDBY",
+                    isActive ? "RECORDING" : "STANDBY",
                     style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
                       color: isActive ? AppTheme.error : AppTheme.success,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 48),
+            const SizedBox(height: 32),
             Text(
               isActive ? "00:42:15" : "00:00:00",
-              style: GoogleFonts.manrope(
-                fontSize: 80,
-                fontWeight: FontWeight.w200,
-                letterSpacing: -4,
+              style: GoogleFonts.inter(
+                fontSize: 72,
+                fontWeight: FontWeight.w400,
                 color: AppTheme.textPrimary,
                 fontFeatures: [const FontFeature.tabularFigures()],
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              isActive ? "TRANSCRIBING IN BACKGROUND" : "READY FOR CAPTURE",
+              isActive ? "System actively capturing audio" : "Tap to start intelligence session",
               style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1,
-                color: AppTheme.textSecondary.withValues(alpha: 0.4),
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: AppTheme.textSecondary,
               ),
             ),
           ],
@@ -214,64 +188,23 @@ class StatusMonitor extends ConsumerWidget {
   }
 }
 
-class _BlinkingDot extends StatefulWidget {
-  final Color color;
-  const _BlinkingDot({required this.color});
-
-  @override
-  State<_BlinkingDot> createState() => _BlinkingDotState();
-}
-
-class _BlinkingDotState extends State<_BlinkingDot> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _controller,
-      child: Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: widget.color,
-          shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: widget.color.withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 2)],
-        ),
-      ),
-    );
-  }
-}
-
 class WaveformVisualizer extends StatelessWidget {
   const WaveformVisualizer({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 100,
-      padding: const EdgeInsets.symmetric(horizontal: 40),
+    return SizedBox(
+      height: 60,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: List.generate(30, (index) {
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 4,
-            height: 10 + (index % 5 * 15).toDouble(),
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(40, (index) {
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 1.5),
+            width: 2.5,
+            height: 4 + (index % 7 * 4).toDouble(),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(10),
+              color: AppTheme.textSecondary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(2),
             ),
           );
         }),
@@ -291,69 +224,39 @@ class RecordingController extends ConsumerWidget {
         final settings = snapshot.data;
         final isActive = settings?.isRecordingActive ?? false;
         
-        return GestureDetector(
-          onTap: () async {
-            final isar = ref.read(isarProvider);
-            final currentSettings = await isar.appSettings.get(0) ?? AppSettings();
-            
-            await isar.writeTxn(() async {
-              currentSettings.isRecordingActive = !isActive;
-              await isar.appSettings.put(currentSettings);
-            });
+        return Material(
+          color: isActive ? AppTheme.error : AppTheme.primary,
+          shape: const CircleBorder(),
+          elevation: 0,
+          child: InkWell(
+            onTap: () async {
+              final isar = ref.read(isarProvider);
+              final currentSettings = await isar.appSettings.get(0) ?? AppSettings();
+              
+              await isar.writeTxn(() async {
+                currentSettings.isRecordingActive = !isActive;
+                await isar.appSettings.put(currentSettings);
+              });
 
-            final service = FlutterBackgroundService();
-            if (!isActive) {
-              await service.startService();
-              service.invoke("startRecording");
-            } else {
-              service.invoke("stopRecording");
-            }
-          },
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Outer Glow
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 500),
-                width: 140,
-                height: 140,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: (isActive ? AppTheme.error : AppTheme.primary).withValues(alpha: 0.05),
-                ),
+              final service = FlutterBackgroundService();
+              if (!isActive) {
+                await service.startService();
+                service.invoke("startRecording");
+              } else {
+                service.invoke("stopRecording");
+              }
+            },
+            customBorder: const CircleBorder(),
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: const BoxDecoration(shape: BoxShape.circle),
+              child: Icon(
+                isActive ? Icons.stop_rounded : Icons.mic_rounded,
+                color: Colors.white,
+                size: 36,
               ),
-              // Main Button
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: isActive ? AppTheme.error : AppTheme.primary,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: (isActive ? AppTheme.error : AppTheme.primary).withValues(alpha: 0.4),
-                      blurRadius: 40,
-                      spreadRadius: 10,
-                    ),
-                  ],
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: isActive 
-                      ? [const Color(0xFFFF3B30), const Color(0xFFFF2D55)]
-                      : [AppTheme.primary, const Color(0xFF007AFF)],
-                  ),
-                ),
-                child: Center(
-                  child: Icon(
-                    isActive ? Icons.stop_rounded : Icons.mic_rounded,
-                    color: Colors.white,
-                    size: 48,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         );
       },

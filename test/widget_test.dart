@@ -41,8 +41,8 @@ void main() {
     await tester.pump();
 
     // Verify key elements
-    expect(find.text('ECHOSCRIPT'), findsOneWidget);
-    expect(find.text('Intelligence Unit'), findsOneWidget);
+    expect(find.text('EchoScript'), findsOneWidget);
+    expect(find.text('Enterprise Audio Intelligence'), findsOneWidget);
     
     // Clean up
     tester.view.resetPhysicalSize();

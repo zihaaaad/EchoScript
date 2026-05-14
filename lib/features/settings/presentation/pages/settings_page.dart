@@ -63,12 +63,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Preferences synchronized", style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        const SnackBar(
+          content: Text("Settings updated"),
           backgroundColor: AppTheme.success,
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(20),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       );
     }
@@ -77,147 +74,106 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text("Configuration"),
+        title: const Text("Settings"),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Center(
               child: ModernButton(
-                label: "SAVE",
+                label: "Apply",
                 onTap: _saveSettings,
-                icon: Icons.done_all_rounded,
+                icon: Icons.check_rounded,
               ),
             ),
           ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        padding: const EdgeInsets.all(24),
         children: [
-          _buildSectionHeader("AI ENGINE"),
+          _buildSectionHeader("AI CONFIGURATION"),
           const SizedBox(height: 16),
           GlassCard(
-            padding: const EdgeInsets.all(28),
+            padding: const EdgeInsets.all(20),
             child: Column(
               children: [
                 TextField(
                   controller: _apiKeyController,
                   obscureText: true,
-                  style: const TextStyle(fontSize: 16),
-                  decoration: _inputDecoration("Gemini API Key", Icons.key_rounded),
+                  decoration: _inputDecoration("API Key", Icons.key_outlined),
                 ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Divider(color: Colors.white12, height: 1),
-                ),
+                const SizedBox(height: 20),
                 DropdownButtonFormField<String>(
                   initialValue: _model,
                   dropdownColor: AppTheme.surface,
-                  icon: const Icon(Icons.expand_more_rounded, color: AppTheme.primary),
-                  style: GoogleFonts.inter(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w500),
-                  decoration: _inputDecoration("Intelligence Model", Icons.auto_awesome_rounded),
+                  decoration: _inputDecoration("Engine Model", Icons.bolt_outlined),
                   items: const [
-                    DropdownMenuItem(value: 'gemini-1.5-flash', child: Text('1.5 Flash (Performance)')),
-                    DropdownMenuItem(value: 'gemini-1.5-pro', child: Text('1.5 Pro (Accuracy)')),
+                    DropdownMenuItem(value: 'gemini-1.5-flash', child: Text('1.5 Flash')),
+                    DropdownMenuItem(value: 'gemini-1.5-pro', child: Text('1.5 Pro')),
                   ],
                   onChanged: (val) => setState(() => _model = val!),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 40),
-          _buildSectionHeader("AUDIO DSP"),
+          const SizedBox(height: 32),
+          _buildSectionHeader("AUDIO CONTROL"),
           const SizedBox(height: 16),
           GlassCard(
-            padding: const EdgeInsets.all(28),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text("Microphone Gain", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        "${_gain.toStringAsFixed(1)} dB",
-                        style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w900, fontSize: 14),
-                      ),
-                    ),
+                    Text("Gain Adjustment", style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
+                    Text("${_gain.toStringAsFixed(1)} dB", style: GoogleFonts.inter(color: AppTheme.primary, fontWeight: FontWeight.w700)),
                   ],
                 ),
-                const SizedBox(height: 20),
-                SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    trackHeight: 6,
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10, elevation: 5),
-                  ),
-                  child: Slider(
-                    value: _gain,
-                    min: -12.0,
-                    max: 24.0,
-                    divisions: 36,
-                    onChanged: (val) => setState(() => _gain = val),
-                  ),
+                Slider(
+                  value: _gain,
+                  min: -12.0,
+                  max: 24.0,
+                  divisions: 36,
+                  onChanged: (val) => setState(() => _gain = val),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 32),
           _buildSectionHeader("SYSTEM PROMPT"),
           const SizedBox(height: 16),
           GlassCard(
-            padding: const EdgeInsets.all(28),
+            padding: const EdgeInsets.all(20),
             child: TextField(
               controller: _promptController,
-              maxLines: 6,
-              style: GoogleFonts.inter(fontSize: 15, height: 1.6, fontWeight: FontWeight.w400),
-              decoration: _inputDecoration("Logic Instructions", Icons.psychology_alt_rounded).copyWith(
-                hintText: "Configure the AI behavior...",
-              ),
+              maxLines: 4,
+              decoration: _inputDecoration("Instructions", Icons.description_outlined),
             ),
           ),
-          const SizedBox(height: 60),
-          Column(
-            children: [
-              Text(
-                "ECHOSCRIPT",
-                style: GoogleFonts.manrope(
-                  letterSpacing: 6,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white.withValues(alpha: 0.1),
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "Build $_appVersion",
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.05), fontSize: 11, fontWeight: FontWeight.bold),
-              ),
-            ],
+          const SizedBox(height: 48),
+          Center(
+            child: Text(
+              "Version $_appVersion",
+              style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 11),
+            ),
           ),
-          const SizedBox(height: 40),
         ],
       ),
     );
   }
 
   Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 8),
-      child: Text(
-        title,
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 2,
-          color: AppTheme.textSecondary.withValues(alpha: 0.6),
-        ),
+    return Text(
+      title,
+      style: GoogleFonts.inter(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: AppTheme.textSecondary,
+        letterSpacing: 1,
       ),
     );
   }
@@ -225,14 +181,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      labelStyle: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w700),
-      prefixIcon: Padding(
-        padding: const EdgeInsets.only(right: 16),
-        child: Icon(icon, color: AppTheme.primary, size: 22),
-      ),
-      prefixIconConstraints: const BoxConstraints(minWidth: 40),
-      border: InputBorder.none,
-      floatingLabelBehavior: FloatingLabelBehavior.always,
+      labelStyle: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 13),
+      prefixIcon: Icon(icon, color: AppTheme.textSecondary, size: 20),
+      border: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
+      enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
+      focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.primary)),
     );
   }
 }
