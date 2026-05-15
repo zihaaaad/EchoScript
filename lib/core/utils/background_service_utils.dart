@@ -93,7 +93,7 @@ void onStart(ServiceInstance service) async {
   });
 
   // 5. Watch for Transcription Progress to update UI
-  isar.audioChunks.where().statusEqualTo(ChunkStatus.transcribing).watch().listen((chunks) {
+  isar.audioChunks.filter().statusEqualTo(ChunkStatus.transcribing).watch().listen((chunks) {
     if (chunks.isNotEmpty) {
       service.invoke('statusUpdate', {
         'isTranscribing': true,
