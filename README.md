@@ -1,36 +1,35 @@
 # EchoScript: Enterprise Audio Intelligence
 
-**EchoScript** is a mission-critical, high-fidelity background audio capture and concurrent AI transcription engine. Engineered for professional environments, it provides seamless, 24/7 intelligence gathering with human-level accuracy powered by Google Gemini 1.5.
+**Version:** 1.0.0+11  
+**Philosophy:** Zero-Failure, Mission-Critical Intelligence.
 
-## 🚀 Core Value Proposition
-- **Zero-Gap Reliability:** Advanced double-buffered PCM16 streaming ensuring not a single syllable is lost during rotation.
-- **Concurrent AI Processing:** Dynamic worker pool management for real-time transcription of 30-minute audio chunks.
-- **Strategic Privacy:** On-device secure credential management via Android Keystore/iOS Keychain and automated local data lifecycle.
-- **Strategic Clarity UX:** A minimalist, high-contrast "OLED Black" interface designed for maximum signal and zero distraction.
+EchoScript is a professional-grade background audio capture and concurrent AI transcription engine. Designed for 24/7 reliability, it leverages Google's Gemini Pro architecture to turn ambient audio into searchable, actionable intelligence.
 
-## 🛠️ Architecture & Stack
-- **Framework:** Flutter (Mobile)
-- **State Management:** Riverpod 2.x (Explicit Dependency Injection)
-- **Persistence:** Isar NoSQL (Transactional ACID compliance)
-- **AI Engine:** Google Gemini 1.5 (Pro & Flash)
-- **Design:** "Strategic Clarity" (2026 Professional Standard)
+## 🛡️ Enterprise Pillars
 
-## 📦 Deployment & Setup
-1. **Repository Synchronization:**
-   ```bash
-   git clone https://github.com/zihaaaad/EchoScript.git
-   flutter pub get
-   ```
-2. **AI Protocol Activation:**
-   - Secure a Gemini API Key from the [Google AI Studio](https://aistudio.google.com/).
-   - Input the key into the encrypted vault within the app's **Control Center**.
-3. **Execution:**
-   ```bash
-   flutter run --release
-   ```
+### 1. Zero-Gap Audio Capture
+Unlike standard recording apps, EchoScript uses a dual-sink rotation engine. It swaps file buffers without stopping the hardware recorder, ensuring 100% gapless continuous capture during long-running sessions.
 
-## 📊 Technical Documentation
-Comprehensive architectural maps, SRE-compliant retry logic specifications, and UX research notes are available in the [Project Wiki](https://github.com/zihaaaad/EchoScript/wiki).
+### 2. SRE-Hardened Intelligence Pipeline
+*   **Zero-Heap Streaming:** Audio is streamed directly to the Gemini Files API, maintaining a near-zero memory footprint even for hour-long recordings.
+*   **Resilient Queueing:** An Isar-based persistent queue handles network outages with exponential backoff retries.
+*   **Hardware Tuning:** User-configurable concurrency limits allow for performance scaling based on device hardware.
+
+### 3. Strategic Clarity UI
+A 2026-standard "OLED Black" interface designed for high-contrast visibility and reduced eye strain. Features a Bento-grid dashboard and a real-time word-tokenized search archive.
+
+## 🚀 Quick Start
+
+1.  **API Integration:** Securely store your Gemini API Key in the **Control Center**.
+2.  **Hardware Sync:** Calibrate software gain and AI concurrency based on your environment.
+3.  **Deploy:** Press the **Initiate Capture** node to begin the intelligence protocol.
+
+## 🛠️ Technical Specifications
+*   **Architecture:** Clean Architecture + Riverpod 2.x
+*   **Database:** Isar (NoSQL) with Full-Text Search
+*   **AI Engine:** Gemini 1.5 Flash/Pro via Files API
+*   **Security:** OS-level encryption (FlutterSecureStorage)
+*   **CI/CD:** Automated GitHub Actions (Build/Test/Release)
 
 ---
-*Enterprise Intelligence. Redefined.*
+*Enterprise intelligence, delivered without compromise.*
