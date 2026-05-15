@@ -17,6 +17,7 @@ class AudioChunk {
   String? transcription;
   String? errorMessage;
   int retryCount = 0;
+  DateTime? lastAttemptTime;
 }
 
 enum ChunkStatus {

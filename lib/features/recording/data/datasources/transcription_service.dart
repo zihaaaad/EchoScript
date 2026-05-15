@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:isar/isar.dart';
@@ -12,8 +13,8 @@ class TranscriptionService {
   final Logger _logger = Logger();
   
   bool _isProcessing = false;
-  static const int maxConcurrency = 2; // Big Tech Solution: Managed Concurrency
-  static const int maxRetries = 3;     // Robust Retry Policy
+  static const int maxConcurrency = 2; // SRE-compliant concurrency limit
+  static const int maxRetries = 3;     // SRE-compliant retry limit
 
   TranscriptionService({
     required this.isar,
@@ -31,7 +32,9 @@ class TranscriptionService {
       final apiKey = await secureStorage.read(key: 'gemini_api_key');
       if (apiKey == null || apiKey.isEmpty) return;
 
-      // Select chunks that are pending OR failed but eligible for retry
+      final now = DateTime.now();
+
+      // 1. Fetch eligible candidates (Pending OR Failed within retry limit)
       final eligibleChunks = await isar.audioChunks
           .where()
           .filter()
@@ -46,21 +49,53 @@ class TranscriptionService {
           )
           .findAll();
 
-      if (eligibleChunks.isEmpty) return;
-
-      _logger.i("Transcription: Processing ${eligibleChunks.length} chunks (Concurrent)");
-
-      // Process in batches to avoid rate limits and OOM
-      for (var i = 0; i < eligibleChunks.length; i += maxConcurrency) {
-        final end = (i + maxConcurrency < eligibleChunks.length) 
-            ? i + maxConcurrency 
-            : eligibleChunks.length;
+      // 2. Filter by smart exponential backoff (2^retryCount minutes)
+      final chunksToProcess = eligibleChunks.where((chunk) {
+        if (chunk.status == ChunkStatus.pending) return true;
+        if (chunk.lastAttemptTime == null) return true;
         
-        final batch = eligibleChunks.sublist(i, end);
-        await Future.wait(batch.map((chunk) => _transcribeWithRetry(chunk, settings, apiKey)));
+        final backoffDuration = Duration(minutes: 1 << chunk.retryCount);
+        return now.isAfter(chunk.lastAttemptTime!.add(backoffDuration));
+      }).toList();
+
+      if (chunksToProcess.isEmpty) return;
+
+      _logger.i("Transcription: Initiating dynamic pool for ${chunksToProcess.length} chunks");
+
+      // 3. Dynamic Worker Pool Execution
+      var activeWorkers = 0;
+      var currentIndex = 0;
+      final poolCompleter = Completer<void>();
+
+      void runNext() async {
+        if (currentIndex >= chunksToProcess.length) {
+          if (activeWorkers == 0 && !poolCompleter.isCompleted) {
+            poolCompleter.complete();
+          }
+          return;
+        }
+
+        final chunk = chunksToProcess[currentIndex++];
+        activeWorkers++;
+
+        try {
+          await _transcribeWithRetry(chunk, settings, apiKey);
+        } catch (e) {
+          _logger.e("Transcription: Worker error for ${chunk.id}", error: e);
+        } finally {
+          activeWorkers--;
+          runNext();
+        }
       }
+
+      // Start initial batch of workers
+      for (var i = 0; i < maxConcurrency && i < chunksToProcess.length; i++) {
+        runNext();
+      }
+
+      await poolCompleter.future;
     } catch (e, stack) {
-      _logger.e("Transcription: Queue critical failure", error: e, stackTrace: stack);
+      _logger.e("Transcription: Pool critical failure", error: e, stackTrace: stack);
     } finally {
       _isProcessing = false;
     }
@@ -68,32 +103,30 @@ class TranscriptionService {
 
   Future<void> _transcribeWithRetry(AudioChunk chunk, AppSettings settings, String apiKey) async {
     try {
-      // 1. Pre-flight checks
       final audioFile = File(chunk.filePath);
       if (!await audioFile.exists()) {
         await isar.writeTxn(() async {
           chunk.status = ChunkStatus.failed;
-          chunk.errorMessage = "Source file purged or missing";
+          chunk.errorMessage = "Source purged";
+          chunk.lastAttemptTime = DateTime.now();
           await isar.audioChunks.put(chunk);
         });
         return;
       }
 
-      // 2. State transition
       await isar.writeTxn(() async {
         chunk.status = ChunkStatus.transcribing;
+        chunk.lastAttemptTime = DateTime.now();
         await isar.audioChunks.put(chunk);
       });
 
-      // 3. AI Execution
       final model = GenerativeModel(
         model: settings.geminiModel,
         apiKey: apiKey,
         systemInstruction: Content.system(settings.systemPrompt),
       );
 
-      // Warning: readAsBytes can OOM on very large files (e.g. >200MB)
-      // For 30min WAV @ 16kHz Mono, it's ~57MB. Safe for most enterprise devices.
+      // Memory-efficient handling: bytes read only during request scope
       final bytes = await audioFile.readAsBytes();
       final content = [
         Content.multi([
@@ -105,27 +138,28 @@ class TranscriptionService {
       final text = response.text;
 
       if (text != null && text.isNotEmpty) {
-        // 4. Persistence
         await isar.writeTxn(() async {
           chunk.transcription = text;
           chunk.status = ChunkStatus.completed;
           await isar.audioChunks.put(chunk);
         });
         
-        // 5. Cleanup
+        _logger.i("Transcription: Archive successful for ${chunk.id}");
+
         if (await audioFile.exists()) {
           await audioFile.delete();
         }
       } else {
-        throw Exception("AI returned empty transcription result.");
+        throw Exception("Incomplete AI response");
       }
     } catch (e) {
-      _logger.w("Transcription: Chunk failed (${chunk.filePath}): $e");
+      _logger.w("Transcription: Chunk ${chunk.id} failure: $e");
       
       await isar.writeTxn(() async {
         chunk.status = ChunkStatus.failed;
         chunk.errorMessage = e.toString();
         chunk.retryCount++;
+        chunk.lastAttemptTime = DateTime.now();
         await isar.audioChunks.put(chunk);
       });
     }

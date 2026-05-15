@@ -32,24 +32,29 @@ const AudioChunkSchema = CollectionSchema(
       name: r'filePath',
       type: IsarType.string,
     ),
-    r'retryCount': PropertySchema(
+    r'lastAttemptTime': PropertySchema(
       id: 3,
+      name: r'lastAttemptTime',
+      type: IsarType.dateTime,
+    ),
+    r'retryCount': PropertySchema(
+      id: 4,
       name: r'retryCount',
       type: IsarType.long,
     ),
     r'startTime': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'startTime',
       type: IsarType.dateTime,
     ),
     r'status': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'status',
       type: IsarType.string,
       enumMap: _AudioChunkstatusEnumValueMap,
     ),
     r'transcription': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'transcription',
       type: IsarType.string,
     )
@@ -100,10 +105,11 @@ void _audioChunkSerialize(
   writer.writeDateTime(offsets[0], object.endTime);
   writer.writeString(offsets[1], object.errorMessage);
   writer.writeString(offsets[2], object.filePath);
-  writer.writeLong(offsets[3], object.retryCount);
-  writer.writeDateTime(offsets[4], object.startTime);
-  writer.writeString(offsets[5], object.status.name);
-  writer.writeString(offsets[6], object.transcription);
+  writer.writeDateTime(offsets[3], object.lastAttemptTime);
+  writer.writeLong(offsets[4], object.retryCount);
+  writer.writeDateTime(offsets[5], object.startTime);
+  writer.writeString(offsets[6], object.status.name);
+  writer.writeString(offsets[7], object.transcription);
 }
 
 AudioChunk _audioChunkDeserialize(
@@ -117,12 +123,13 @@ AudioChunk _audioChunkDeserialize(
   object.errorMessage = reader.readStringOrNull(offsets[1]);
   object.filePath = reader.readString(offsets[2]);
   object.id = id;
-  object.retryCount = reader.readLong(offsets[3]);
-  object.startTime = reader.readDateTime(offsets[4]);
+  object.lastAttemptTime = reader.readDateTimeOrNull(offsets[3]);
+  object.retryCount = reader.readLong(offsets[4]);
+  object.startTime = reader.readDateTime(offsets[5]);
   object.status =
-      _AudioChunkstatusValueEnumMap[reader.readStringOrNull(offsets[5])] ??
+      _AudioChunkstatusValueEnumMap[reader.readStringOrNull(offsets[6])] ??
           ChunkStatus.recording;
-  object.transcription = reader.readStringOrNull(offsets[6]);
+  object.transcription = reader.readStringOrNull(offsets[7]);
   return object;
 }
 
@@ -140,13 +147,15 @@ P _audioChunkDeserializeProp<P>(
     case 2:
       return (reader.readString(offset)) as P;
     case 3:
-      return (reader.readLong(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 4:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 5:
+      return (reader.readDateTime(offset)) as P;
+    case 6:
       return (_AudioChunkstatusValueEnumMap[reader.readStringOrNull(offset)] ??
           ChunkStatus.recording) as P;
-    case 6:
+    case 7:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -671,6 +680,80 @@ extension AudioChunkQueryFilter
     });
   }
 
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      lastAttemptTimeIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'lastAttemptTime',
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      lastAttemptTimeIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'lastAttemptTime',
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      lastAttemptTimeEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'lastAttemptTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      lastAttemptTimeGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'lastAttemptTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      lastAttemptTimeLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'lastAttemptTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      lastAttemptTimeBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'lastAttemptTime',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition> retryCountEqualTo(
       int value) {
     return QueryBuilder.apply(this, (query) {
@@ -1110,6 +1193,19 @@ extension AudioChunkQuerySortBy
     });
   }
 
+  QueryBuilder<AudioChunk, AudioChunk, QAfterSortBy> sortByLastAttemptTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastAttemptTime', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterSortBy>
+      sortByLastAttemptTimeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastAttemptTime', Sort.desc);
+    });
+  }
+
   QueryBuilder<AudioChunk, AudioChunk, QAfterSortBy> sortByRetryCount() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'retryCount', Sort.asc);
@@ -1209,6 +1305,19 @@ extension AudioChunkQuerySortThenBy
     });
   }
 
+  QueryBuilder<AudioChunk, AudioChunk, QAfterSortBy> thenByLastAttemptTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastAttemptTime', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterSortBy>
+      thenByLastAttemptTimeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastAttemptTime', Sort.desc);
+    });
+  }
+
   QueryBuilder<AudioChunk, AudioChunk, QAfterSortBy> thenByRetryCount() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'retryCount', Sort.asc);
@@ -1280,6 +1389,12 @@ extension AudioChunkQueryWhereDistinct
     });
   }
 
+  QueryBuilder<AudioChunk, AudioChunk, QDistinct> distinctByLastAttemptTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'lastAttemptTime');
+    });
+  }
+
   QueryBuilder<AudioChunk, AudioChunk, QDistinct> distinctByRetryCount() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'retryCount');
@@ -1331,6 +1446,13 @@ extension AudioChunkQueryProperty
   QueryBuilder<AudioChunk, String, QQueryOperations> filePathProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'filePath');
+    });
+  }
+
+  QueryBuilder<AudioChunk, DateTime?, QQueryOperations>
+      lastAttemptTimeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'lastAttemptTime');
     });
   }
 
