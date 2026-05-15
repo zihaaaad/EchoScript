@@ -3,15 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../../main.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/audio_chunk.dart';
 
-class HistoryPage extends ConsumerWidget {
+class HistoryPage extends ConsumerStatefulWidget {
   const HistoryPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HistoryPage> createState() => _HistoryPageState();
+}
+
+class _HistoryPageState extends ConsumerState<HistoryPage> {
+  final _searchController = TextEditingController();
+  String _searchQuery = "";
+
+  @override
+  Widget build(BuildContext context) {
     final isar = ref.watch(isarProvider);
     
     return Scaffold(
@@ -28,45 +37,103 @@ class HistoryPage extends ConsumerWidget {
           style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.5),
         ),
       ),
-      body: StreamBuilder<List<AudioChunk>>(
-        stream: isar.audioChunks
-            .where()
-            .sortByStartTimeDesc()
-            .watch(fireImmediately: true),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-          
-          final chunks = snapshot.data!;
-          if (chunks.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surface,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.auto_awesome_rounded, size: 40, color: AppTheme.textSecondary.withValues(alpha: 0.1)),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    "Archive is currently empty",
-                    style: GoogleFonts.inter(color: AppTheme.textSecondary, fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                ],
-              ),
-            );
-          }
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: _buildSearchBar(),
+          ),
+          Expanded(
+            child: StreamBuilder<List<AudioChunk>>(
+              stream: _buildQuery(isar).watch(fireImmediately: true),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                
+                final chunks = snapshot.data!;
+                if (chunks.isEmpty) {
+                  return _buildEmptyState();
+                }
 
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            itemCount: chunks.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 16),
-            itemBuilder: (context, index) => _BentoHistoryCard(chunk: chunks[index]),
-          );
-        },
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+                  itemCount: chunks.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 16),
+                  itemBuilder: (context, index) => _BentoHistoryCard(chunk: chunks[index]),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterSortBy> _buildQuery(Isar isar) {
+    if (_searchQuery.isEmpty) {
+      return isar.audioChunks.where().sortByStartTimeDesc();
+    }
+    
+    return isar.audioChunks
+        .filter()
+        .transcriptionWordsElementContains(_searchQuery, caseSensitive: false)
+        .sortByStartTimeDesc();
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (val) => setState(() => _searchQuery = val),
+        style: GoogleFonts.inter(color: AppTheme.textPrimary, fontSize: 14),
+        decoration: InputDecoration(
+          icon: const Icon(Icons.search_rounded, color: AppTheme.textSecondary, size: 20),
+          hintText: "Search intelligence...",
+          hintStyle: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 14),
+          border: InputBorder.none,
+          suffixIcon: _searchQuery.isNotEmpty 
+            ? IconButton(
+                icon: const Icon(Icons.close_rounded, size: 18),
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = "");
+                },
+              )
+            : null,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _searchQuery.isEmpty ? Icons.auto_awesome_rounded : Icons.search_off_rounded, 
+              size: 40, 
+              color: AppTheme.textSecondary.withValues(alpha: 0.1)
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            _searchQuery.isEmpty ? "Archive is currently empty" : "No results for \"$_searchQuery\"",
+            style: GoogleFonts.inter(color: AppTheme.textSecondary, fontWeight: FontWeight.w600, fontSize: 14),
+          ),
+        ],
       ),
     );
   }
@@ -178,6 +245,9 @@ class _DetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final formattedDate = DateFormat('EEEE, MMM dd, yyyy').format(chunk.startTime);
+    final formattedTime = DateFormat('HH:mm').format(chunk.startTime);
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -190,7 +260,14 @@ class _DetailView extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.ios_share_rounded, size: 20, color: AppTheme.primary),
-            onPressed: () {},
+            onPressed: () {
+              final text = "EchoScript Intelligence Report\n"
+                  "Date: $formattedDate\n"
+                  "Time: $formattedTime\n\n"
+                  "Transcription:\n"
+                  "${chunk.transcription ?? 'No transcription available.'}";
+              Share.share(text, subject: 'EchoScript Intelligence - $formattedDate');
+            },
           ),
           const SizedBox(width: 8),
         ],
@@ -202,47 +279,54 @@ class _DetailView extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
             Text(
-              DateFormat('EEEE, MMM dd').format(chunk.startTime),
+              formattedDate,
               style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 8),
             Text(
-              DateFormat('HH:mm').format(chunk.startTime),
+              formattedTime,
               style: GoogleFonts.inter(fontSize: 48, fontWeight: FontWeight.w800, color: AppTheme.textPrimary, letterSpacing: -1.5),
             ),
             const SizedBox(height: 32),
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(32),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface,
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                ),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.description_outlined, color: AppTheme.primary, size: 16),
-                      const SizedBox(width: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.description_outlined, color: AppTheme.primary, size: 16),
+                          const SizedBox(width: 8),
+                          Text(
+                            "TRANSCRIPTION",
+                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.textSecondary, letterSpacing: 1),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
                       Text(
-                        "TRANSCRIPTION",
-                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.textSecondary, letterSpacing: 1),
+                        chunk.transcription ?? "Recording intelligence is still processing...",
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          height: 1.7,
+                          color: chunk.transcription == null ? AppTheme.textSecondary : AppTheme.textPrimary,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  Text(
-                    chunk.transcription ?? "Recording intelligence is still processing...",
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      height: 1.7,
-                      color: chunk.transcription == null ? AppTheme.textSecondary : AppTheme.textPrimary,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
+            const SizedBox(height: 40),
           ],
         ),
       ),

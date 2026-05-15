@@ -17,7 +17,6 @@ class RecordingService {
   Timer? _rotationTimer;
   IOSink? _currentSink;
   String? _currentPath;
-  DateTime? _startTime;
   int? _currentChunkId;
   int _currentByteCount = 0;
 
@@ -82,7 +81,6 @@ class RecordingService {
       final newFile = File(newPath);
       _currentSink = newFile.openWrite();
       _currentPath = newPath;
-      _startTime = startTime;
       _currentByteCount = 0;
       
       // Write placeholder for WAV header (44 bytes)

@@ -57,6 +57,11 @@ const AudioChunkSchema = CollectionSchema(
       id: 7,
       name: r'transcription',
       type: IsarType.string,
+    ),
+    r'transcriptionWords': PropertySchema(
+      id: 8,
+      name: r'transcriptionWords',
+      type: IsarType.stringList,
     )
   },
   estimateSize: _audioChunkEstimateSize,
@@ -64,7 +69,34 @@ const AudioChunkSchema = CollectionSchema(
   deserialize: _audioChunkDeserialize,
   deserializeProp: _audioChunkDeserializeProp,
   idName: r'id',
-  indexes: {},
+  indexes: {
+    r'transcription': IndexSchema(
+      id: 4643241730478453883,
+      name: r'transcription',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'transcription',
+          type: IndexType.value,
+          caseSensitive: true,
+        )
+      ],
+    ),
+    r'transcriptionWords': IndexSchema(
+      id: 7400658182030090040,
+      name: r'transcriptionWords',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'transcriptionWords',
+          type: IndexType.value,
+          caseSensitive: false,
+        )
+      ],
+    )
+  },
   links: {},
   embeddedSchemas: {},
   getId: _audioChunkGetId,
@@ -93,6 +125,13 @@ int _audioChunkEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  bytesCount += 3 + object.transcriptionWords.length * 3;
+  {
+    for (var i = 0; i < object.transcriptionWords.length; i++) {
+      final value = object.transcriptionWords[i];
+      bytesCount += value.length * 3;
+    }
+  }
   return bytesCount;
 }
 
@@ -110,6 +149,7 @@ void _audioChunkSerialize(
   writer.writeDateTime(offsets[5], object.startTime);
   writer.writeString(offsets[6], object.status.name);
   writer.writeString(offsets[7], object.transcription);
+  writer.writeStringList(offsets[8], object.transcriptionWords);
 }
 
 AudioChunk _audioChunkDeserialize(
@@ -157,6 +197,8 @@ P _audioChunkDeserializeProp<P>(
           ChunkStatus.recording) as P;
     case 7:
       return (reader.readStringOrNull(offset)) as P;
+    case 8:
+      return (reader.readStringList(offset) ?? []) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -194,6 +236,23 @@ extension AudioChunkQueryWhereSort
   QueryBuilder<AudioChunk, AudioChunk, QAfterWhere> anyId() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(const IdWhereClause.any());
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhere> anyTranscription() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'transcription'),
+      );
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhere>
+      anyTranscriptionWordsElement() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'transcriptionWords'),
+      );
     });
   }
 }
@@ -262,6 +321,309 @@ extension AudioChunkQueryWhere
         upper: upperId,
         includeUpper: includeUpper,
       ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause>
+      transcriptionIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'transcription',
+        value: [null],
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause>
+      transcriptionIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'transcription',
+        lower: [null],
+        includeLower: false,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause> transcriptionEqualTo(
+      String? transcription) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'transcription',
+        value: [transcription],
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause>
+      transcriptionNotEqualTo(String? transcription) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'transcription',
+              lower: [],
+              upper: [transcription],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'transcription',
+              lower: [transcription],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'transcription',
+              lower: [transcription],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'transcription',
+              lower: [],
+              upper: [transcription],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause>
+      transcriptionGreaterThan(
+    String? transcription, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'transcription',
+        lower: [transcription],
+        includeLower: include,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause> transcriptionLessThan(
+    String? transcription, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'transcription',
+        lower: [],
+        upper: [transcription],
+        includeUpper: include,
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause> transcriptionBetween(
+    String? lowerTranscription,
+    String? upperTranscription, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'transcription',
+        lower: [lowerTranscription],
+        includeLower: includeLower,
+        upper: [upperTranscription],
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause>
+      transcriptionStartsWith(String TranscriptionPrefix) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'transcription',
+        lower: [TranscriptionPrefix],
+        upper: ['$TranscriptionPrefix\u{FFFFF}'],
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause>
+      transcriptionIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'transcription',
+        value: [''],
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause>
+      transcriptionIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.lessThan(
+              indexName: r'transcription',
+              upper: [''],
+            ))
+            .addWhereClause(IndexWhereClause.greaterThan(
+              indexName: r'transcription',
+              lower: [''],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.greaterThan(
+              indexName: r'transcription',
+              lower: [''],
+            ))
+            .addWhereClause(IndexWhereClause.lessThan(
+              indexName: r'transcription',
+              upper: [''],
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause>
+      transcriptionWordsElementEqualTo(String transcriptionWordsElement) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'transcriptionWords',
+        value: [transcriptionWordsElement],
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause>
+      transcriptionWordsElementNotEqualTo(String transcriptionWordsElement) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'transcriptionWords',
+              lower: [],
+              upper: [transcriptionWordsElement],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'transcriptionWords',
+              lower: [transcriptionWordsElement],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'transcriptionWords',
+              lower: [transcriptionWordsElement],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'transcriptionWords',
+              lower: [],
+              upper: [transcriptionWordsElement],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause>
+      transcriptionWordsElementGreaterThan(
+    String transcriptionWordsElement, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'transcriptionWords',
+        lower: [transcriptionWordsElement],
+        includeLower: include,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause>
+      transcriptionWordsElementLessThan(
+    String transcriptionWordsElement, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'transcriptionWords',
+        lower: [],
+        upper: [transcriptionWordsElement],
+        includeUpper: include,
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause>
+      transcriptionWordsElementBetween(
+    String lowerTranscriptionWordsElement,
+    String upperTranscriptionWordsElement, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'transcriptionWords',
+        lower: [lowerTranscriptionWordsElement],
+        includeLower: includeLower,
+        upper: [upperTranscriptionWordsElement],
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause>
+      transcriptionWordsElementStartsWith(
+          String TranscriptionWordsElementPrefix) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'transcriptionWords',
+        lower: [TranscriptionWordsElementPrefix],
+        upper: ['$TranscriptionWordsElementPrefix\u{FFFFF}'],
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause>
+      transcriptionWordsElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'transcriptionWords',
+        value: [''],
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterWhereClause>
+      transcriptionWordsElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.lessThan(
+              indexName: r'transcriptionWords',
+              upper: [''],
+            ))
+            .addWhereClause(IndexWhereClause.greaterThan(
+              indexName: r'transcriptionWords',
+              lower: [''],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.greaterThan(
+              indexName: r'transcriptionWords',
+              lower: [''],
+            ))
+            .addWhereClause(IndexWhereClause.lessThan(
+              indexName: r'transcriptionWords',
+              upper: [''],
+            ));
+      }
     });
   }
 }
@@ -1147,6 +1509,233 @@ extension AudioChunkQueryFilter
       ));
     });
   }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      transcriptionWordsElementEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'transcriptionWords',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      transcriptionWordsElementGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'transcriptionWords',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      transcriptionWordsElementLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'transcriptionWords',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      transcriptionWordsElementBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'transcriptionWords',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      transcriptionWordsElementStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'transcriptionWords',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      transcriptionWordsElementEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'transcriptionWords',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      transcriptionWordsElementContains(String value,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'transcriptionWords',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      transcriptionWordsElementMatches(String pattern,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'transcriptionWords',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      transcriptionWordsElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'transcriptionWords',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      transcriptionWordsElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'transcriptionWords',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      transcriptionWordsLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'transcriptionWords',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      transcriptionWordsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'transcriptionWords',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      transcriptionWordsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'transcriptionWords',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      transcriptionWordsLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'transcriptionWords',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      transcriptionWordsLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'transcriptionWords',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<AudioChunk, AudioChunk, QAfterFilterCondition>
+      transcriptionWordsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'transcriptionWords',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
 }
 
 extension AudioChunkQueryObject
@@ -1421,6 +2010,13 @@ extension AudioChunkQueryWhereDistinct
           caseSensitive: caseSensitive);
     });
   }
+
+  QueryBuilder<AudioChunk, AudioChunk, QDistinct>
+      distinctByTranscriptionWords() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'transcriptionWords');
+    });
+  }
 }
 
 extension AudioChunkQueryProperty
@@ -1477,6 +2073,13 @@ extension AudioChunkQueryProperty
   QueryBuilder<AudioChunk, String?, QQueryOperations> transcriptionProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'transcription');
+    });
+  }
+
+  QueryBuilder<AudioChunk, List<String>, QQueryOperations>
+      transcriptionWordsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'transcriptionWords');
     });
   }
 }

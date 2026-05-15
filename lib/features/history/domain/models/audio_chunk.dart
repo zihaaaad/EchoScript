@@ -14,6 +14,10 @@ class AudioChunk {
   @Enumerated(EnumType.name)
   late ChunkStatus status;
   
+  @Index(type: IndexType.value, caseSensitive: false)
+  List<String> get transcriptionWords => transcription?.split(RegExp(r'\s+')) ?? [];
+
+  @Index(type: IndexType.value)
   String? transcription;
   String? errorMessage;
   int retryCount = 0;
