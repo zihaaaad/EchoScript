@@ -64,27 +64,35 @@ class RecordingService {
   }
 
   Future<void> _openNewFileSink() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    _currentPath = '${dir.path}/chunk_$timestamp.wav'; 
-    _startTime = DateTime.now();
-    _currentByteCount = 0;
-    
-    final chunk = AudioChunk()
-      ..filePath = _currentPath!
-      ..startTime = _startTime!
-      ..status = ChunkStatus.recording;
+    try {
+      final dir = await getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final newPath = '${dir.path}/chunk_$timestamp.wav'; 
+      final startTime = DateTime.now();
+      
+      final chunk = AudioChunk()
+        ..filePath = newPath
+        ..startTime = startTime
+        ..status = ChunkStatus.recording;
 
-    await isar.writeTxn(() async {
-      _currentChunkId = await isar.audioChunks.put(chunk);
-    });
+      await isar.writeTxn(() async {
+        _currentChunkId = await isar.audioChunks.put(chunk);
+      });
 
-    _currentSink = File(_currentPath!).openWrite();
-    
-    // Write placeholder for WAV header (44 bytes)
-    _currentSink!.add(Uint8List(44)); 
-    
-    _logger.i("Recording: Opened new sink at $_currentPath");
+      final newFile = File(newPath);
+      _currentSink = newFile.openWrite();
+      _currentPath = newPath;
+      _startTime = startTime;
+      _currentByteCount = 0;
+      
+      // Write placeholder for WAV header (44 bytes)
+      _currentSink!.add(Uint8List(44)); 
+      
+      _logger.i("Recording: Opened new sink at $_currentPath");
+    } catch (e, stack) {
+      _logger.e("Recording: Critical failure opening new sink", error: e, stackTrace: stack);
+      await stop(); // Shutdown to prevent data loss/null sink streaming
+    }
   }
 
   Future<void> _rotateChunk() async {
@@ -94,21 +102,27 @@ class RecordingService {
     final oldChunkId = _currentChunkId;
     final oldByteCount = _currentByteCount;
 
-    await _openNewFileSink();
+    try {
+      await _openNewFileSink();
 
-    if (oldSink != null && oldPath != null) {
-      await oldSink.flush();
-      await oldSink.close();
-      await _finalizeWavHeader(oldPath, oldByteCount);
-    }
-
-    if (oldChunkId != null) {
-      final chunk = await isar.audioChunks.get(oldChunkId);
-      if (chunk != null) {
-        chunk.status = ChunkStatus.pending;
-        chunk.endTime = DateTime.now();
-        await isar.writeTxn(() => isar.audioChunks.put(chunk));
+      if (oldSink != null && oldPath != null) {
+        await oldSink.flush();
+        await oldSink.close();
+        await _finalizeWavHeader(oldPath, oldByteCount);
       }
+
+      if (oldChunkId != null) {
+        final chunk = await isar.audioChunks.get(oldChunkId);
+        if (chunk != null) {
+          chunk.status = ChunkStatus.pending;
+          chunk.endTime = DateTime.now();
+          await isar.writeTxn(() => isar.audioChunks.put(chunk));
+        }
+      }
+    } catch (e) {
+      _logger.e("Recording: Rotation failure", error: e);
+      // Ensure old sink is closed if new one fails and we stop
+      await oldSink?.close();
     }
   }
 

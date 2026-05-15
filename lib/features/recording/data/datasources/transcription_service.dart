@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:isar/isar.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -127,7 +128,7 @@ class TranscriptionService {
       );
 
       // Memory-efficient handling: bytes read only during request scope
-      final bytes = await audioFile.readAsBytes();
+      var bytes = await audioFile.readAsBytes();
       final content = [
         Content.multi([
           DataPart('audio/wav', bytes),
@@ -135,6 +136,10 @@ class TranscriptionService {
       ];
 
       final response = await model.generateContent(content);
+      
+      // Explicitly clear byte reference for GC
+      bytes = Uint8List(0);
+      
       final text = response.text;
 
       if (text != null && text.isNotEmpty) {
