@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:logger/logger.dart';
 import '../../../../core/constants/constants.dart';
 import '../../../history/domain/models/audio_chunk.dart';
+import '../../../settings/domain/models/app_settings.dart';
 
 class RecordingService {
   final Isar isar;
@@ -32,8 +33,11 @@ class RecordingService {
       if (await Permission.microphone.request().isGranted) {
         await _startGaplessRecording();
         
+        final settings = await isar.appSettings.get(0);
+        final durationSeconds = (settings?.chunkDurationMinutes ?? 30) * 60;
+
         _rotationTimer = Timer.periodic(
-          Duration(seconds: AppConstants.chunkDurationSeconds),
+          Duration(seconds: durationSeconds),
           (_) => _rotateChunk(),
         );
       } else {

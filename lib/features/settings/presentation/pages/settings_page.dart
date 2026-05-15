@@ -18,6 +18,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   final _promptController = TextEditingController();
   double _gain = 0.0;
   int _concurrency = 2;
+  int _chunkDuration = 30;
   String _model = 'gemini-1.5-flash';
   String _appVersion = '';
 
@@ -46,6 +47,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         _gain = settings.audioGainDb;
         _model = settings.geminiModel;
         _concurrency = settings.aiConcurrencyLimit;
+        _chunkDuration = settings.chunkDurationMinutes;
       });
     }
   }
@@ -60,6 +62,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     settings.audioGainDb = _gain;
     settings.geminiModel = _model;
     settings.aiConcurrencyLimit = _concurrency;
+    settings.chunkDurationMinutes = _chunkDuration;
 
     await isar.writeTxn(() async {
       await isar.appSettings.put(settings);
@@ -160,8 +163,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   divisions: 4,
                   onChanged: (val) => setState(() => _concurrency = val.toInt()),
                 ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("Chunk Rotation", style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                    Text("$_chunkDuration Min", style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.primary)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Slider(
+                  value: _chunkDuration.toDouble(),
+                  min: 1,
+                  max: 60,
+                  divisions: 59,
+                  onChanged: (val) => setState(() => _chunkDuration = val.toInt()),
+                ),
                 Text(
-                  "Higher units increase throughput but require more device RAM and stable network.",
+                  "Defines the duration of audio segments. Higher units increase throughput but require more device RAM and stable network.",
                   style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textSecondary),
                 ),
               ],

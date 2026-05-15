@@ -27,23 +27,28 @@ const AppSettingsSchema = CollectionSchema(
       name: r'audioGainDb',
       type: IsarType.double,
     ),
-    r'geminiModel': PropertySchema(
+    r'chunkDurationMinutes': PropertySchema(
       id: 2,
+      name: r'chunkDurationMinutes',
+      type: IsarType.long,
+    ),
+    r'geminiModel': PropertySchema(
+      id: 3,
       name: r'geminiModel',
       type: IsarType.string,
     ),
     r'isRecordingActive': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'isRecordingActive',
       type: IsarType.bool,
     ),
     r'recordingStartTime': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'recordingStartTime',
       type: IsarType.dateTime,
     ),
     r'systemPrompt': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'systemPrompt',
       type: IsarType.string,
     )
@@ -81,10 +86,11 @@ void _appSettingsSerialize(
 ) {
   writer.writeLong(offsets[0], object.aiConcurrencyLimit);
   writer.writeDouble(offsets[1], object.audioGainDb);
-  writer.writeString(offsets[2], object.geminiModel);
-  writer.writeBool(offsets[3], object.isRecordingActive);
-  writer.writeDateTime(offsets[4], object.recordingStartTime);
-  writer.writeString(offsets[5], object.systemPrompt);
+  writer.writeLong(offsets[2], object.chunkDurationMinutes);
+  writer.writeString(offsets[3], object.geminiModel);
+  writer.writeBool(offsets[4], object.isRecordingActive);
+  writer.writeDateTime(offsets[5], object.recordingStartTime);
+  writer.writeString(offsets[6], object.systemPrompt);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -96,11 +102,12 @@ AppSettings _appSettingsDeserialize(
   final object = AppSettings();
   object.aiConcurrencyLimit = reader.readLong(offsets[0]);
   object.audioGainDb = reader.readDouble(offsets[1]);
-  object.geminiModel = reader.readString(offsets[2]);
+  object.chunkDurationMinutes = reader.readLong(offsets[2]);
+  object.geminiModel = reader.readString(offsets[3]);
   object.id = id;
-  object.isRecordingActive = reader.readBool(offsets[3]);
-  object.recordingStartTime = reader.readDateTimeOrNull(offsets[4]);
-  object.systemPrompt = reader.readString(offsets[5]);
+  object.isRecordingActive = reader.readBool(offsets[4]);
+  object.recordingStartTime = reader.readDateTimeOrNull(offsets[5]);
+  object.systemPrompt = reader.readString(offsets[6]);
   return object;
 }
 
@@ -116,12 +123,14 @@ P _appSettingsDeserializeProp<P>(
     case 1:
       return (reader.readDouble(offset)) as P;
     case 2:
-      return (reader.readString(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 3:
-      return (reader.readBool(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 4:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 5:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 6:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -339,6 +348,62 @@ extension AppSettingsQueryFilter
         upper: upper,
         includeUpper: includeUpper,
         epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      chunkDurationMinutesEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'chunkDurationMinutes',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      chunkDurationMinutesGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'chunkDurationMinutes',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      chunkDurationMinutesLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'chunkDurationMinutes',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      chunkDurationMinutesBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'chunkDurationMinutes',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
       ));
     });
   }
@@ -787,6 +852,20 @@ extension AppSettingsQuerySortBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByChunkDurationMinutes() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'chunkDurationMinutes', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByChunkDurationMinutesDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'chunkDurationMinutes', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByGeminiModel() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'geminiModel', Sort.asc);
@@ -866,6 +945,20 @@ extension AppSettingsQuerySortThenBy
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByAudioGainDbDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'audioGainDb', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByChunkDurationMinutes() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'chunkDurationMinutes', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByChunkDurationMinutesDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'chunkDurationMinutes', Sort.desc);
     });
   }
 
@@ -950,6 +1043,13 @@ extension AppSettingsQueryWhereDistinct
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByChunkDurationMinutes() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'chunkDurationMinutes');
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByGeminiModel(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -997,6 +1097,13 @@ extension AppSettingsQueryProperty
   QueryBuilder<AppSettings, double, QQueryOperations> audioGainDbProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'audioGainDb');
+    });
+  }
+
+  QueryBuilder<AppSettings, int, QQueryOperations>
+      chunkDurationMinutesProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'chunkDurationMinutes');
     });
   }
 

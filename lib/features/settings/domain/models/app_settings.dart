@@ -13,4 +13,5 @@ class AppSettings {
   bool isRecordingActive = false;
   DateTime? recordingStartTime;
   int aiConcurrencyLimit = 2;
+  int chunkDurationMinutes = 30;
 }
