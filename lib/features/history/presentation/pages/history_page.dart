@@ -76,7 +76,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     
     return isar.audioChunks
         .filter()
-        .transcriptionWordsElementContains(_searchQuery, caseSensitive: false)
+        .transcriptionContains(_searchQuery, caseSensitive: false)
         .sortByStartTimeDesc();
   }
 

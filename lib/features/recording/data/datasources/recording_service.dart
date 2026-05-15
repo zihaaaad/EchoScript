@@ -6,6 +6,7 @@ import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:logger/logger.dart';
+import 'package:audio_session/audio_session.dart';
 import '../../../../core/constants/constants.dart';
 import '../../../history/domain/models/audio_chunk.dart';
 import '../../../settings/domain/models/app_settings.dart';
@@ -20,22 +21,55 @@ class RecordingService {
   String? _currentPath;
   int? _currentChunkId;
   int _currentByteCount = 0;
+  bool _shouldBeRecording = false;
+  StreamSubscription? _interruptionSubscription;
 
   RecordingService(this.isar);
 
   Future<void> init() async {
     _recorder = FlutterSoundRecorder();
     await _recorder!.openRecorder();
+    
+    final session = await AudioSession.instance;
+    await session.configure(const AudioSessionConfiguration(
+      avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+      avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | 
+                                     AVAudioSessionCategoryOptions.defaultToSpeaker,
+      avAudioSessionMode: AVAudioSessionMode.defaultMode,
+      avAudioSessionRouteSharingPolicy: AVAudioSessionRouteSharingPolicy.defaultPolicy,
+      avAudioSessionSetActiveOptions: AVAudioSessionSetActiveOptions.none,
+      androidAudioAttributes: AndroidAudioAttributes(
+        contentType: AndroidAudioContentType.speech,
+        flags: AndroidAudioFlags.none,
+        usage: AndroidAudioUsage.voiceCommunication,
+      ),
+      androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+      androidWillPauseWhenDucked: true,
+    ));
+
+    _interruptionSubscription = session.interruptionEventStream.listen((event) {
+      if (event.begin) {
+        _logger.w("Recording: Hardware hijacked (Interruption began)");
+        _pauseInternal();
+      } else {
+        _logger.i("Recording: Hardware available (Interruption ended)");
+        if (_shouldBeRecording) {
+          _resumeInternal();
+        }
+      }
+    });
   }
 
   Future<void> start() async {
     try {
       if (await Permission.microphone.request().isGranted) {
+        _shouldBeRecording = true;
         await _startGaplessRecording();
         
         final settings = await isar.appSettings.get(0);
         final durationSeconds = (settings?.chunkDurationMinutes ?? 30) * 60;
 
+        _rotationTimer?.cancel();
         _rotationTimer = Timer.periodic(
           Duration(seconds: durationSeconds),
           (_) => _rotateChunk(),
@@ -64,6 +98,20 @@ class RecordingService {
       _currentSink?.add(data);
       _currentByteCount += data.length;
     });
+  }
+
+  void _pauseInternal() async {
+    if (_recorder?.isRecording ?? false) {
+      await _recorder!.stopRecorder();
+      _logger.i("Recording: Paused due to hijack");
+    }
+  }
+
+  void _resumeInternal() async {
+    if (_shouldBeRecording && !(_recorder?.isRecording ?? false)) {
+      _logger.i("Recording: Resuming capture...");
+      await _startGaplessRecording();
+    }
   }
 
   Future<void> _openNewFileSink() async {
@@ -177,6 +225,7 @@ class RecordingService {
 
   Future<void> stop() async {
     try {
+      _shouldBeRecording = false;
       _rotationTimer?.cancel();
       if (_recorder!.isRecording) {
         await _recorder!.stopRecorder();
@@ -207,6 +256,7 @@ class RecordingService {
 
   void dispose() {
     _rotationTimer?.cancel();
+    _interruptionSubscription?.cancel();
     _recorder?.closeRecorder();
   }
 }

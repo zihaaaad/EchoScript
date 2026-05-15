@@ -8,6 +8,7 @@ The recording engine must operate without interruption for days or weeks.
 - **Dual-Sink Handover:** During chunk rotation, the system pre-allocates the next file and `IOSink` before finalizing the current one. This ensures that the PCM stream is never dropped by the recorder.
 - **Wakelock Protection:** `WakelockPlus` is enabled during recording to prevent the OS from suspending the CPU, which would lead to capture gaps.
 - **Isolate Recovery:** The background service is configured to auto-restart if terminated by the OS (platform-dependent).
+- **Hardware Hijack Recovery:** Implements the `audio_session` listener to detect when the microphone is taken by high-priority system events (e.g., phone calls). The engine enters a non-blocking "Waiting" state and automatically resumes the capture pipeline once the hardware becomes available.
 
 ## 2. Memory Management (Zero-Heap Policy)
 To prevent OOM (Out of Memory) crashes on mobile devices, the system avoids loading large audio files into memory.
