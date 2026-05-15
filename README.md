@@ -1,46 +1,38 @@
-# EchoScript: Enterprise Audio Intelligence
+# EchoScript Intelligence Unit
 
-**Version:** 1.0.1+12  
-**Philosophy:** Zero-Failure, Mission-Critical Intelligence.
+**Version:** 1.1.0  
+**Project Lead:** Zihad Hasan
 
-EchoScript is a professional-grade background audio capture and concurrent AI transcription engine. Designed for 24/7 reliability, it leverages Google's Gemini Pro architecture to turn ambient audio into searchable, actionable intelligence.
+EchoScript is a technical implementation for high-reliability background audio capture and concurrent asynchronous transcription using the Gemini API. The system is designed for persistent 24/7 operation with a focus on data integrity, local-first persistence, and memory-efficient streaming.
 
-## 🏛️ Project Governance
-- **Author/Project Lead:** [Zihad Hasan](https://github.com/zihaaaad)
-- **Organization:** As-Sunnah Foundation AI Team
+## Core Technical Pillars
 
-## 🛡️ Enterprise Pillars
+### 1. Gapless Audio Capture
+The system utilizes a dual-sink rotation engine. It manages the handover between IOSink objects in under 50ms, ensuring a continuous capture stream during multi-hour recording sessions. Rotation intervals are user-configurable between 1 and 60 minutes.
 
-### 1. Zero-Gap Audio Capture
-EchoScript uses a dual-sink rotation engine. It swaps file buffers without stopping the hardware recorder, ensuring 100% gapless continuous capture during long-running sessions. Users can define rotation intervals (1–60 minutes) in the Control Center.
+### 2. SRE-Hardened Pipeline
+- **Memory Management:** Implements multipart streaming via the Gemini Files API, maintaining a flat heap profile by avoiding large buffer allocations.
+- **Resilience:** Features an Isar-based persistent queue with exponential backoff (retry logic for 429 and 503 status codes).
+- **Process Persistence:** Background isolates are synchronized with WakelockPlus and Foreground Service notifications to maintain activity across Android power profiles.
 
-### 2. SRE-Hardened Intelligence Pipeline
-*   **Zero-Heap Streaming:** Audio is streamed directly to the Gemini Files API via multipart uploads, maintaining a flat memory profile even for massive recordings.
-*   **Resilient Queueing:** An Isar-based persistent queue handles network outages with exponential backoff retries (429/503 handling).
-*   **Background Integrity:** Optimized background isolates with WakelockPlus ensure 24/7 persistence even under aggressive Android battery saving.
+### 3. Data Architecture
+- **Persistence:** Utilizes Isar (NoSQL) for high-performance metadata and transcription storage.
+- **Search:** Transcription text is indexed for sub-millisecond full-text search.
+- **Privacy:** Implements a 24-hour audio purge protocol and local-first storage in `getTemporaryDirectory()`.
 
-### 3. Strategic Clarity UI (2026 Standard)
-A high-contrast "OLED Black" (Slate 950) interface. Features a Bento-grid dashboard and a real-time word-tokenized search archive for sub-millisecond keyword retrieval.
+## System Architecture
 
-## 🛠️ System Architecture (Clean Architecture / MVVM)
+The project follows a strict Clean Architecture pattern with MVVM state management:
 
-```mermaid
-graph TD
-    UI[Presentation Layer: UI/Riverpod] --> VM[Domain Layer: Models/UseCases]
-    VM --> DATA[Data Layer: Isar/Gemini API/SecureStorage]
-    DATA --> ISOLATE[Background Isolate: RecordingService]
-```
+- **Presentation Layer:** Flutter UI with Riverpod for reactive state synchronization.
+- **Domain Layer:** Business logic, entities, and repository interfaces.
+- **Data Layer:** Isar implementations, Secure Storage for API keys, and background service isolates.
 
-## 🚀 Setup & Deployment
+## Deployment and Setup
 
-1.  **API Integration:** Obtain a Gemini API Key and securely store it in the **Control Center**.
-2.  **Permissions:** Grant Microphone and Notification permissions. Exempt the app from **Battery Optimization** for 24/7 reliability.
-3.  **Deploy:** Press the **Initiate Capture** node to begin the intelligence protocol.
-
-## 🔒 Security & Privacy
-- **Local-First Storage:** All audio chunks reside in `getTemporaryDirectory()` to bypass cloud backup syncing.
-- **24-Hour Purge:** Audio data is automatically purged from the device after successful AI transcription.
-- **Encryption:** API keys are stored in encrypted OS-level storage (FlutterSecureStorage).
+1. **API Key:** API keys must be stored in the encrypted Control Center (utilizes FlutterSecureStorage).
+2. **Permissions:** Requires Microphone and Notification permissions. Battery optimization should be disabled for the EchoScript process to ensure 24/7 stability.
+3. **Hardware:** Software gain calibration is available in the Hardware DSP section of the settings.
 
 ---
-*Enterprise intelligence, delivered without compromise. Copyright (c) 2026 Zihad Hasan.*
+Copyright (c) 2026 Zihad Hasan | As-Sunnah Foundation AI Team

@@ -1,3 +1,4 @@
+// (c) 2026 Zihad Hasan | EchoScript Intelligence Unit
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';

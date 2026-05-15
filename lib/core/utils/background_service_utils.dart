@@ -1,3 +1,4 @@
+// (c) 2026 Zihad Hasan | EchoScript Intelligence Unit
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter_background_service/flutter_background_service.dart';
