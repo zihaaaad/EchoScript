@@ -17,6 +17,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   final _apiKeyController = TextEditingController();
   final _promptController = TextEditingController();
   double _gain = 0.0;
+  int _concurrency = 2;
   String _model = 'gemini-1.5-flash';
   String _appVersion = '';
 
@@ -44,6 +45,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         _promptController.text = settings.systemPrompt;
         _gain = settings.audioGainDb;
         _model = settings.geminiModel;
+        _concurrency = settings.aiConcurrencyLimit;
       });
     }
   }
@@ -57,6 +59,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     settings.systemPrompt = _promptController.text;
     settings.audioGainDb = _gain;
     settings.geminiModel = _model;
+    settings.aiConcurrencyLimit = _concurrency;
 
     await isar.writeTxn(() async {
       await isar.appSettings.put(settings);
@@ -132,6 +135,34 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   max: 24.0,
                   divisions: 36,
                   onChanged: (val) => setState(() => _gain = val),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildBentoSection(
+            "Hardware Optimization",
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("AI Concurrency", style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                    Text("$_concurrency Units", style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.primary)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Slider(
+                  value: _concurrency.toDouble(),
+                  min: 1,
+                  max: 5,
+                  divisions: 4,
+                  onChanged: (val) => setState(() => _concurrency = val.toInt()),
+                ),
+                Text(
+                  "Higher units increase throughput but require more device RAM and stable network.",
+                  style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textSecondary),
                 ),
               ],
             ),

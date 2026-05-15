@@ -17,28 +17,33 @@ const AppSettingsSchema = CollectionSchema(
   name: r'AppSettings',
   id: -5633561779022347008,
   properties: {
-    r'audioGainDb': PropertySchema(
+    r'aiConcurrencyLimit': PropertySchema(
       id: 0,
+      name: r'aiConcurrencyLimit',
+      type: IsarType.long,
+    ),
+    r'audioGainDb': PropertySchema(
+      id: 1,
       name: r'audioGainDb',
       type: IsarType.double,
     ),
     r'geminiModel': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'geminiModel',
       type: IsarType.string,
     ),
     r'isRecordingActive': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'isRecordingActive',
       type: IsarType.bool,
     ),
     r'recordingStartTime': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'recordingStartTime',
       type: IsarType.dateTime,
     ),
     r'systemPrompt': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'systemPrompt',
       type: IsarType.string,
     )
@@ -74,11 +79,12 @@ void _appSettingsSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeDouble(offsets[0], object.audioGainDb);
-  writer.writeString(offsets[1], object.geminiModel);
-  writer.writeBool(offsets[2], object.isRecordingActive);
-  writer.writeDateTime(offsets[3], object.recordingStartTime);
-  writer.writeString(offsets[4], object.systemPrompt);
+  writer.writeLong(offsets[0], object.aiConcurrencyLimit);
+  writer.writeDouble(offsets[1], object.audioGainDb);
+  writer.writeString(offsets[2], object.geminiModel);
+  writer.writeBool(offsets[3], object.isRecordingActive);
+  writer.writeDateTime(offsets[4], object.recordingStartTime);
+  writer.writeString(offsets[5], object.systemPrompt);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -88,12 +94,13 @@ AppSettings _appSettingsDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = AppSettings();
-  object.audioGainDb = reader.readDouble(offsets[0]);
-  object.geminiModel = reader.readString(offsets[1]);
+  object.aiConcurrencyLimit = reader.readLong(offsets[0]);
+  object.audioGainDb = reader.readDouble(offsets[1]);
+  object.geminiModel = reader.readString(offsets[2]);
   object.id = id;
-  object.isRecordingActive = reader.readBool(offsets[2]);
-  object.recordingStartTime = reader.readDateTimeOrNull(offsets[3]);
-  object.systemPrompt = reader.readString(offsets[4]);
+  object.isRecordingActive = reader.readBool(offsets[3]);
+  object.recordingStartTime = reader.readDateTimeOrNull(offsets[4]);
+  object.systemPrompt = reader.readString(offsets[5]);
   return object;
 }
 
@@ -105,14 +112,16 @@ P _appSettingsDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 1:
-      return (reader.readString(offset)) as P;
+      return (reader.readDouble(offset)) as P;
     case 2:
-      return (reader.readBool(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 3:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 4:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 5:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -212,6 +221,62 @@ extension AppSettingsQueryWhere
 
 extension AppSettingsQueryFilter
     on QueryBuilder<AppSettings, AppSettings, QFilterCondition> {
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      aiConcurrencyLimitEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'aiConcurrencyLimit',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      aiConcurrencyLimitGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'aiConcurrencyLimit',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      aiConcurrencyLimitLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'aiConcurrencyLimit',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      aiConcurrencyLimitBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'aiConcurrencyLimit',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
       audioGainDbEqualTo(
     double value, {
@@ -696,6 +761,20 @@ extension AppSettingsQueryLinks
 
 extension AppSettingsQuerySortBy
     on QueryBuilder<AppSettings, AppSettings, QSortBy> {
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByAiConcurrencyLimit() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiConcurrencyLimit', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByAiConcurrencyLimitDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiConcurrencyLimit', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByAudioGainDb() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'audioGainDb', Sort.asc);
@@ -764,6 +843,20 @@ extension AppSettingsQuerySortBy
 
 extension AppSettingsQuerySortThenBy
     on QueryBuilder<AppSettings, AppSettings, QSortThenBy> {
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByAiConcurrencyLimit() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiConcurrencyLimit', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByAiConcurrencyLimitDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiConcurrencyLimit', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByAudioGainDb() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'audioGainDb', Sort.asc);
@@ -844,6 +937,13 @@ extension AppSettingsQuerySortThenBy
 
 extension AppSettingsQueryWhereDistinct
     on QueryBuilder<AppSettings, AppSettings, QDistinct> {
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByAiConcurrencyLimit() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'aiConcurrencyLimit');
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByAudioGainDb() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'audioGainDb');
@@ -884,6 +984,13 @@ extension AppSettingsQueryProperty
   QueryBuilder<AppSettings, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<AppSettings, int, QQueryOperations>
+      aiConcurrencyLimitProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'aiConcurrencyLimit');
     });
   }
 

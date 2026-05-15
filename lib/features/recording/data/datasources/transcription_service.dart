@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
+import 'package:dio/dio.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:isar/isar.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -12,10 +12,10 @@ class TranscriptionService {
   final Isar isar;
   final FlutterSecureStorage secureStorage;
   final Logger _logger = Logger();
+  final Dio _dio = Dio();
   
   bool _isProcessing = false;
-  static const int maxConcurrency = 2; // SRE-compliant concurrency limit
-  static const int maxRetries = 3;     // SRE-compliant retry limit
+  static const int maxRetries = 3;
 
   TranscriptionService({
     required this.isar,
@@ -61,7 +61,7 @@ class TranscriptionService {
 
       if (chunksToProcess.isEmpty) return;
 
-      _logger.i("Transcription: Initiating dynamic pool for ${chunksToProcess.length} chunks");
+      _logger.i("Transcription: Initiating dynamic pool for ${chunksToProcess.length} chunks (Limit: ${settings.aiConcurrencyLimit})");
 
       // 3. Dynamic Worker Pool Execution
       var activeWorkers = 0;
@@ -89,8 +89,8 @@ class TranscriptionService {
         }
       }
 
-      // Start initial batch of workers
-      for (var i = 0; i < maxConcurrency && i < chunksToProcess.length; i++) {
+      // Start initial batch of workers based on user hardware preference
+      for (var i = 0; i < settings.aiConcurrencyLimit && i < chunksToProcess.length; i++) {
         runNext();
       }
 
@@ -121,25 +121,23 @@ class TranscriptionService {
         await isar.audioChunks.put(chunk);
       });
 
+      // 1. Upload to Gemini Files API using Streaming Multipart
+      final fileUri = await _uploadToFilesApi(audioFile, apiKey);
+      
       final model = GenerativeModel(
         model: settings.geminiModel,
         apiKey: apiKey,
         systemInstruction: Content.system(settings.systemPrompt),
       );
 
-      // Memory-efficient handling: bytes read only during request scope
-      var bytes = await audioFile.readAsBytes();
+      // 2. Transcribe using the File Reference (Zero Heap Spike)
       final content = [
         Content.multi([
-          DataPart('audio/wav', bytes),
+          FilePart(Uri.parse(fileUri)),
         ])
       ];
 
       final response = await model.generateContent(content);
-      
-      // Explicitly clear byte reference for GC
-      bytes = Uint8List(0);
-      
       final text = response.text;
 
       if (text != null && text.isNotEmpty) {
@@ -168,5 +166,33 @@ class TranscriptionService {
         await isar.audioChunks.put(chunk);
       });
     }
+  }
+
+  Future<String> _uploadToFilesApi(File file, String apiKey) async {
+    _logger.d("Files API: Initiating streaming upload for ${file.path}");
+    
+    final uploadUrl = 'https://generativelanguage.googleapis.com/upload/v1beta/files?key=$apiKey';
+    
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(
+        file.path,
+        filename: 'recording.wav',
+        contentType: DioMediaType.parse('audio/wav'),
+      ),
+    });
+
+    final response = await _dio.post(
+      uploadUrl,
+      data: formData,
+      options: Options(
+        headers: {
+          'X-Goog-Upload-Protocol': 'multipart',
+        },
+      ),
+    );
+
+    final fileUri = response.data['file']['uri'] as String;
+    _logger.d("Files API: Upload successful, URI: $fileUri");
+    return fileUri;
   }
 }

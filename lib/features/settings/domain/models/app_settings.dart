@@ -12,4 +12,5 @@ class AppSettings {
   String systemPrompt = 'Transcribe the following audio precisely.';
   bool isRecordingActive = false;
   DateTime? recordingStartTime;
+  int aiConcurrencyLimit = 2;
 }
