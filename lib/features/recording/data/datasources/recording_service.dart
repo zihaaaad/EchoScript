@@ -113,7 +113,8 @@ class RecordingService {
   }
 
   Future<void> _finalizeWavHeader(String path, int byteCount) async {
-    final raf = await File(path).open(mode: FileMode.readWrite);
+    final raf = await File(path).open(mode: FileMode.append);
+    await raf.setPosition(0);
     final header = _createWavHeader(byteCount);
     await raf.writeFrom(header);
     await raf.close();
