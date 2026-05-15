@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../main.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/app_settings.dart';
-import '../../../../shared/widgets/modern_widgets.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -30,15 +29,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   Future<void> _loadVersion() async {
     final info = await PackageInfo.fromPlatform();
-    setState(() {
-      _appVersion = '${info.version}+${info.buildNumber}';
-    });
+    setState(() => _appVersion = '${info.version}+${info.buildNumber}');
   }
 
   Future<void> _loadSettings() async {
     final isar = ref.read(isarProvider);
     final secureStorage = ref.read(secureStorageProvider);
-    
     final settings = await isar.appSettings.get(0);
     final apiKey = await secureStorage.read(key: 'gemini_api_key');
     
@@ -55,13 +51,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Future<void> _saveSettings() async {
     final isar = ref.read(isarProvider);
     final secureStorage = ref.read(secureStorageProvider);
-    
     final settings = await isar.appSettings.get(0) ?? AppSettings();
     
-    // 1. Save sensitive data to Secure Storage
     await secureStorage.write(key: 'gemini_api_key', value: _apiKeyController.text);
-
-    // 2. Save non-sensitive data to Isar
     settings.systemPrompt = _promptController.text;
     settings.audioGainDb = _gain;
     settings.geminiModel = _model;
@@ -73,8 +65,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Enterprise preferences synchronized"),
+          content: Text("Cloud synchronicity confirmed"),
           backgroundColor: AppTheme.success,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -85,63 +78,54 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text("Settings"),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: AppTheme.textSecondary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          "Control Center",
+          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+        ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Center(
-              child: ModernButton(
-                label: "Apply",
-                onTap: _saveSettings,
-                icon: Icons.lock_outline_rounded,
-              ),
+          TextButton(
+            onPressed: _saveSettings,
+            child: Text(
+              "SYNC",
+              style: GoogleFonts.inter(color: AppTheme.primary, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1),
             ),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         children: [
-          _buildSectionHeader("SECURE AI CONFIGURATION"),
-          const SizedBox(height: 16),
-          GlassCard(
-            padding: const EdgeInsets.all(20),
-            child: Column(
+          _buildBentoSection(
+            "Intelligence Engine",
+            Column(
               children: [
-                TextField(
-                  controller: _apiKeyController,
-                  obscureText: true,
-                  decoration: _inputDecoration("Gemini API Key", Icons.vpn_key_outlined),
-                ),
-                const SizedBox(height: 20),
-                DropdownButtonFormField<String>(
-                  initialValue: _model,
-                  dropdownColor: AppTheme.surface,
-                  decoration: _inputDecoration("Engine Model", Icons.bolt_outlined),
-                  items: const [
-                    DropdownMenuItem(value: 'gemini-1.5-flash', child: Text('1.5 Flash')),
-                    DropdownMenuItem(value: 'gemini-1.5-pro', child: Text('1.5 Pro')),
-                  ],
-                  onChanged: (val) => setState(() => _model = val!),
-                ),
+                _buildTextField("Gemini API Key", _apiKeyController, isPassword: true),
+                const SizedBox(height: 24),
+                _buildDropdown("Processor Model", _model, (val) => setState(() => _model = val!)),
               ],
             ),
           ),
-          const SizedBox(height: 32),
-          _buildSectionHeader("HARDWARE DSP"),
-          const SizedBox(height: 16),
-          GlassCard(
-            padding: const EdgeInsets.all(20),
-            child: Column(
+          const SizedBox(height: 20),
+          _buildBentoSection(
+            "Hardware DSP",
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("Digital Gain", style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
-                    Text("${_gain.toStringAsFixed(1)} dB", style: GoogleFonts.inter(color: AppTheme.primary, fontWeight: FontWeight.w700)),
+                    Text("Software Gain", style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                    Text("${_gain.toStringAsFixed(1)} dB", style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.primary)),
                   ],
                 ),
+                const SizedBox(height: 8),
                 Slider(
                   value: _gain,
                   min: -12.0,
@@ -152,22 +136,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ],
             ),
           ),
-          const SizedBox(height: 32),
-          _buildSectionHeader("SYSTEM PROMPT"),
-          const SizedBox(height: 16),
-          GlassCard(
-            padding: const EdgeInsets.all(20),
-            child: TextField(
-              controller: _promptController,
-              maxLines: 4,
-              decoration: _inputDecoration("Instructions", Icons.terminal_outlined),
-            ),
+          const SizedBox(height: 20),
+          _buildBentoSection(
+            "System Protocols",
+            _buildTextField("Core Instructions", _promptController, maxLines: 4),
           ),
-          const SizedBox(height: 48),
+          const SizedBox(height: 60),
           Center(
-            child: Text(
-              "EchoScript Enterprise v$_appVersion",
-              style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 11),
+            child: Opacity(
+              opacity: 0.5,
+              child: Text(
+                "ECHOSCRIPT ENTERPRISE v$_appVersion",
+                style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 2, color: AppTheme.textSecondary),
+              ),
             ),
           ),
         ],
@@ -175,26 +156,68 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: GoogleFonts.inter(
-        fontSize: 11,
-        fontWeight: FontWeight.w900,
-        color: AppTheme.textSecondary,
-        letterSpacing: 1.5,
-      ),
+  Widget _buildBentoSection(String title, Widget content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 8, bottom: 8),
+          child: Text(
+            title.toUpperCase(),
+            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textSecondary, letterSpacing: 1),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          ),
+          child: content,
+        ),
+      ],
     );
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 13),
-      prefixIcon: Icon(icon, color: AppTheme.primary, size: 20),
-      border: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
-      enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
-      focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.primary)),
+  Widget _buildTextField(String label, TextEditingController controller, {bool isPassword = false, int maxLines = 1}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+        TextField(
+          controller: controller,
+          obscureText: isPassword,
+          maxLines: maxLines,
+          style: GoogleFonts.inter(fontSize: 15, color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+            enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white12)),
+            focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.primary, width: 2)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdown(String label, String value, Function(String?) onChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+        DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          underline: Container(height: 1, color: Colors.white12),
+          dropdownColor: AppTheme.surface,
+          items: const [
+            DropdownMenuItem(value: 'gemini-1.5-flash', child: Text('1.5 Flash (Standard)')),
+            DropdownMenuItem(value: 'gemini-1.5-pro', child: Text('1.5 Pro (Advanced)')),
+          ],
+          onChanged: onChanged,
+        ),
+      ],
     );
   }
 }

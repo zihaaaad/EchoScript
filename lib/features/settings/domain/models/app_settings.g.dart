@@ -32,8 +32,13 @@ const AppSettingsSchema = CollectionSchema(
       name: r'isRecordingActive',
       type: IsarType.bool,
     ),
-    r'systemPrompt': PropertySchema(
+    r'recordingStartTime': PropertySchema(
       id: 3,
+      name: r'recordingStartTime',
+      type: IsarType.dateTime,
+    ),
+    r'systemPrompt': PropertySchema(
+      id: 4,
       name: r'systemPrompt',
       type: IsarType.string,
     )
@@ -72,7 +77,8 @@ void _appSettingsSerialize(
   writer.writeDouble(offsets[0], object.audioGainDb);
   writer.writeString(offsets[1], object.geminiModel);
   writer.writeBool(offsets[2], object.isRecordingActive);
-  writer.writeString(offsets[3], object.systemPrompt);
+  writer.writeDateTime(offsets[3], object.recordingStartTime);
+  writer.writeString(offsets[4], object.systemPrompt);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -86,7 +92,8 @@ AppSettings _appSettingsDeserialize(
   object.geminiModel = reader.readString(offsets[1]);
   object.id = id;
   object.isRecordingActive = reader.readBool(offsets[2]);
-  object.systemPrompt = reader.readString(offsets[3]);
+  object.recordingStartTime = reader.readDateTimeOrNull(offsets[3]);
+  object.systemPrompt = reader.readString(offsets[4]);
   return object;
 }
 
@@ -104,6 +111,8 @@ P _appSettingsDeserializeProp<P>(
     case 2:
       return (reader.readBool(offset)) as P;
     case 3:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 4:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -469,6 +478,80 @@ extension AppSettingsQueryFilter
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      recordingStartTimeIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'recordingStartTime',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      recordingStartTimeIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'recordingStartTime',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      recordingStartTimeEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'recordingStartTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      recordingStartTimeGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'recordingStartTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      recordingStartTimeLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'recordingStartTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      recordingStartTimeBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'recordingStartTime',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
       systemPromptEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -651,6 +734,20 @@ extension AppSettingsQuerySortBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByRecordingStartTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'recordingStartTime', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByRecordingStartTimeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'recordingStartTime', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortBySystemPrompt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'systemPrompt', Sort.asc);
@@ -717,6 +814,20 @@ extension AppSettingsQuerySortThenBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByRecordingStartTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'recordingStartTime', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByRecordingStartTimeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'recordingStartTime', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenBySystemPrompt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'systemPrompt', Sort.asc);
@@ -753,6 +864,13 @@ extension AppSettingsQueryWhereDistinct
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByRecordingStartTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'recordingStartTime');
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QDistinct> distinctBySystemPrompt(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -785,6 +903,13 @@ extension AppSettingsQueryProperty
       isRecordingActiveProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isRecordingActive');
+    });
+  }
+
+  QueryBuilder<AppSettings, DateTime?, QQueryOperations>
+      recordingStartTimeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'recordingStartTime');
     });
   }
 

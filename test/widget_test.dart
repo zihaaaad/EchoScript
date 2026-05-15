@@ -42,7 +42,7 @@ void main() {
 
     // Verify key elements
     expect(find.text('EchoScript'), findsOneWidget);
-    expect(find.text('Enterprise Audio Intelligence'), findsOneWidget);
+    expect(find.text('v1.0.0+11 • Enterprise'), findsOneWidget);
     
     // Clean up
     tester.view.resetPhysicalSize();

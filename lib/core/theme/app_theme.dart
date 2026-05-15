@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Minimalist Professional Palette
-  static const Color primary = Color(0xFF3B82F6); // Professional Blue
-  static const Color background = Color(0xFF0F172A); // Slate 900
-  static const Color surface = Color(0xFF1E293B); // Slate 800
-  static const Color card = Color(0xFF334155); // Slate 700
+  // 2026 "Strategic Clarity" Palette
+  static const Color primary = Color(0xFF2563EB); // Electric Blue
+  static const Color background = Color(0xFF020617); // OLED Black (Slate 950)
+  static const Color surface = Color(0xFF0F172A); // Slate 900
+  static const Color card = Color(0xFF1E293B); // Slate 800
   static const Color textPrimary = Color(0xFFF8FAFC); // Slate 50
-  static const Color textSecondary = Color(0xFF94A3B8); // Slate 400
-  static const Color error = Color(0xFFEF4444); // Red 500
+  static const Color textSecondary = Color(0xFF64748B); // Slate 500
+  static const Color accent = Color(0xFF38BDF8); // Sky 400 (for highlights)
+  static const Color error = Color(0xFFF43F5E); // Rose 500
   static const Color success = Color(0xFF10B981); // Emerald 500
 
   static ThemeData darkTheme = ThemeData(

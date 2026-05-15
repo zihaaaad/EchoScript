@@ -11,4 +11,5 @@ class AppSettings {
   double audioGainDb = 0.0;
   String systemPrompt = 'Transcribe the following audio precisely.';
   bool isRecordingActive = false;
+  DateTime? recordingStartTime;
 }
