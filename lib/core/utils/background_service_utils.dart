@@ -46,7 +46,7 @@ void onStart(ServiceInstance service) async {
   
   const secureStorage = FlutterSecureStorage();
 
-  // 2. Dependency Injection (Manual for Background Isolate)
+  // 2. Dependency Injection
   final recordingService = RecordingService(isar);
   final transcriptionService = TranscriptionService(
     isar: isar,
@@ -56,7 +56,7 @@ void onStart(ServiceInstance service) async {
 
   // 3. Command Listeners
   service.on('startRecording').listen((event) async {
-    await WakelockPlus.enable(); // Prevent CPU throttling
+    await WakelockPlus.enable();
     await manager.startRecording();
   });
 
@@ -71,24 +71,17 @@ void onStart(ServiceInstance service) async {
     service.stopSelf();
   });
 
-  // 4. Single Source of Truth: Watch for settings changes from UI
-  isar.appSettings.watchObject(0, fireImmediately: true).listen((settings) async {
-    if (settings != null) {
-      if (settings.isRecordingActive) {
-        // Handle auto-resume if needed or state alignment
-      }
-    }
-  });
-
-  // 5. Throttled UI Updates (Every 10s instead of 1s to save battery)
-  Timer.periodic(const Duration(seconds: 10), (timer) async {
-    final settings = await isar.appSettings.get(0);
-    final isActive = settings?.isRecordingActive ?? false;
+  // 4. Single Source of Truth: Event-Driven UI Updates
+  // Watch for settings/state changes and update notification IMMEDIATELY
+  isar.appSettings.watchObject(0, fireImmediately: true).listen((settings) {
+    if (settings == null) return;
+    
+    final isActive = settings.isRecordingActive;
     
     if (service is AndroidServiceInstance) {
       service.setForegroundNotificationInfo(
-        title: "EchoScript Active",
-        content: isActive ? "Capturing Intelligence..." : "Intelligence Unit Standby",
+        title: isActive ? "EchoScript: Active" : "EchoScript: Standby",
+        content: isActive ? "Capturing professional intelligence..." : "System ready for capture",
       );
     }
     
@@ -97,5 +90,19 @@ void onStart(ServiceInstance service) async {
       'isActive': isActive,
       'timestamp': DateTime.now().toIso8601String(),
     });
+  });
+
+  // 5. Watch for Transcription Progress to update UI
+  isar.audioChunks.where().statusEqualTo(ChunkStatus.transcribing).watch().listen((chunks) {
+    if (chunks.isNotEmpty) {
+      service.invoke('statusUpdate', {
+        'isTranscribing': true,
+        'count': chunks.length,
+      });
+    } else {
+      service.invoke('statusUpdate', {
+        'isTranscribing': false,
+      });
+    }
   });
 }

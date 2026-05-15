@@ -17,14 +17,19 @@ class DashboardPage extends ConsumerStatefulWidget {
 }
 
 class _DashboardPageState extends ConsumerState<DashboardPage> {
+  bool _isPermissionGranted = false;
+
   @override
   void initState() {
     super.initState();
-    _checkPermissions();
+    _initPermissions();
   }
 
-  Future<void> _checkPermissions() async {
-    await PermissionManager.requestPermissions();
+  Future<void> _initPermissions() async {
+    final granted = await PermissionManager.requestPermissions();
+    if (mounted) {
+      setState(() => _isPermissionGranted = granted);
+    }
   }
 
   @override
@@ -37,13 +42,45 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             _buildAppBar(context),
             const Spacer(),
             const StatusMonitor(),
+            if (!_isPermissionGranted) ...[
+              const SizedBox(height: 24),
+              _buildPermissionWarning(),
+            ],
             const Spacer(),
             const WaveformVisualizer(),
             const SizedBox(height: 60),
-            const RecordingController(),
+            RecordingController(isEnabled: _isPermissionGranted),
             const SizedBox(height: 60),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPermissionWarning() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.error.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.error.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: AppTheme.error, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              "Permissions required to start recording",
+              style: GoogleFonts.inter(color: AppTheme.error, fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ),
+          TextButton(
+            onPressed: _initPermissions,
+            child: const Text("GRANT", style: TextStyle(color: AppTheme.error, fontSize: 11, fontWeight: FontWeight.w900)),
+          ),
+        ],
       ),
     );
   }
@@ -214,7 +251,8 @@ class WaveformVisualizer extends StatelessWidget {
 }
 
 class RecordingController extends ConsumerWidget {
-  const RecordingController({super.key});
+  final bool isEnabled;
+  const RecordingController({super.key, required this.isEnabled});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -224,37 +262,40 @@ class RecordingController extends ConsumerWidget {
         final settings = snapshot.data;
         final isActive = settings?.isRecordingActive ?? false;
         
-        return Material(
-          color: isActive ? AppTheme.error : AppTheme.primary,
-          shape: const CircleBorder(),
-          elevation: 0,
-          child: InkWell(
-            onTap: () async {
-              final isar = ref.read(isarProvider);
-              final currentSettings = await isar.appSettings.get(0) ?? AppSettings();
-              
-              await isar.writeTxn(() async {
-                currentSettings.isRecordingActive = !isActive;
-                await isar.appSettings.put(currentSettings);
-              });
+        return Opacity(
+          opacity: isEnabled ? 1.0 : 0.3,
+          child: Material(
+            color: isActive ? AppTheme.error : AppTheme.primary,
+            shape: const CircleBorder(),
+            elevation: 0,
+            child: InkWell(
+              onTap: isEnabled ? () async {
+                final isar = ref.read(isarProvider);
+                final currentSettings = await isar.appSettings.get(0) ?? AppSettings();
+                
+                await isar.writeTxn(() async {
+                  currentSettings.isRecordingActive = !isActive;
+                  await isar.appSettings.put(currentSettings);
+                });
 
-              final service = FlutterBackgroundService();
-              if (!isActive) {
-                await service.startService();
-                service.invoke("startRecording");
-              } else {
-                service.invoke("stopRecording");
-              }
-            },
-            customBorder: const CircleBorder(),
-            child: Container(
-              width: 90,
-              height: 90,
-              decoration: const BoxDecoration(shape: BoxShape.circle),
-              child: Icon(
-                isActive ? Icons.stop_rounded : Icons.mic_rounded,
-                color: Colors.white,
-                size: 36,
+                final service = FlutterBackgroundService();
+                if (!isActive) {
+                  await service.startService();
+                  service.invoke("startRecording");
+                } else {
+                  service.invoke("stopRecording");
+                }
+              } : null,
+              customBorder: const CircleBorder(),
+              child: Container(
+                width: 90,
+                height: 90,
+                decoration: const BoxDecoration(shape: BoxShape.circle),
+                child: Icon(
+                  isActive ? Icons.stop_rounded : Icons.mic_rounded,
+                  color: Colors.white,
+                  size: 36,
+                ),
               ),
             ),
           ),
