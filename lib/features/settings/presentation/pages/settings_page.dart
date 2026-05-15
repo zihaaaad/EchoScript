@@ -19,7 +19,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   double _gain = 0.0;
   int _concurrency = 2;
   int _chunkDuration = 30;
-  String _model = 'gemini-1.5-flash';
+  String _model = 'gemini-2.5-flash';
   String _appVersion = '';
 
   @override
@@ -262,8 +262,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           underline: Container(height: 1, color: Colors.white12),
           dropdownColor: AppTheme.surface,
           items: const [
-            DropdownMenuItem(value: 'gemini-1.5-flash', child: Text('1.5 Flash (Standard)')),
-            DropdownMenuItem(value: 'gemini-1.5-pro', child: Text('1.5 Pro (Advanced)')),
+            DropdownMenuItem(value: 'gemini-2.5-flash', child: Text('2.5 Flash (Recommended)')),
+            DropdownMenuItem(value: 'gemini-2.5-pro', child: Text('2.5 Pro (Deep Reasoning)')),
+            DropdownMenuItem(value: 'gemini-3.1-flash-lite', child: Text('3.1 Flash-Lite (Fastest)')),
           ],
           onChanged: onChanged,
         ),
