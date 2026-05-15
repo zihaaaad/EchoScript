@@ -3,9 +3,14 @@ import 'dart:ui';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+
 import '../../features/history/domain/models/audio_chunk.dart';
 import '../../features/settings/domain/models/app_settings.dart';
 import '../../features/recording/data/repositories/recording_manager.dart';
+import '../../features/recording/data/datasources/recording_service.dart';
+import '../../features/recording/data/datasources/transcription_service.dart';
 import '../constants/constants.dart';
 
 Future<void> initializeBackgroundService() async {
@@ -17,8 +22,8 @@ Future<void> initializeBackgroundService() async {
       autoStart: false,
       isForegroundMode: true,
       foregroundServiceNotificationId: 888,
-      initialNotificationTitle: 'EchoScript Recording',
-      initialNotificationContent: 'System Standby',
+      initialNotificationTitle: 'EchoScript Intelligence',
+      initialNotificationContent: 'Initializing Engine...',
     ),
     iosConfiguration: IosConfiguration(
       autoStart: false,
@@ -31,31 +36,66 @@ Future<void> initializeBackgroundService() async {
 void onStart(ServiceInstance service) async {
   DartPluginRegistrant.ensureInitialized();
 
+  // 1. Setup Persistence & Security
   final dir = await getApplicationDocumentsDirectory();
   final isar = await Isar.open(
     [AudioChunkSchema, AppSettingsSchema],
     directory: dir.path,
     name: AppConstants.dbName,
   );
+  
+  const secureStorage = FlutterSecureStorage();
 
-  final recordingManager = RecordingManager(isar);
+  // 2. Dependency Injection (Manual for Background Isolate)
+  final recordingService = RecordingService(isar);
+  final transcriptionService = TranscriptionService(
+    isar: isar,
+    secureStorage: secureStorage,
+  );
+  final manager = RecordingManager(isar, recordingService, transcriptionService);
 
-  service.on('startRecording').listen((event) {
-    recordingManager.startRecording();
+  // 3. Command Listeners
+  service.on('startRecording').listen((event) async {
+    await WakelockPlus.enable(); // Prevent CPU throttling
+    await manager.startRecording();
   });
 
-  service.on('stopRecording').listen((event) {
-    recordingManager.stopRecording();
+  service.on('stopRecording').listen((event) async {
+    await manager.stopRecording();
+    await WakelockPlus.disable();
   });
 
-  // Keep service alive and sync status
-  Timer.periodic(const Duration(seconds: 1), (timer) async {
+  service.on('stopService').listen((event) async {
+    await manager.stopRecording();
+    await WakelockPlus.disable();
+    service.stopSelf();
+  });
+
+  // 4. Single Source of Truth: Watch for settings changes from UI
+  isar.appSettings.watchObject(0, fireImmediately: true).listen((settings) async {
+    if (settings != null) {
+      if (settings.isRecordingActive) {
+        // Handle auto-resume if needed or state alignment
+      }
+    }
+  });
+
+  // 5. Throttled UI Updates (Every 10s instead of 1s to save battery)
+  Timer.periodic(const Duration(seconds: 10), (timer) async {
     final settings = await isar.appSettings.get(0);
-    if (settings != null && service is AndroidServiceInstance) {
+    final isActive = settings?.isRecordingActive ?? false;
+    
+    if (service is AndroidServiceInstance) {
       service.setForegroundNotificationInfo(
         title: "EchoScript Active",
-        content: settings.isRecordingActive ? "Capture in progress..." : "System Standby",
+        content: isActive ? "Capturing Intelligence..." : "Intelligence Unit Standby",
       );
     }
+    
+    // Push real-time status back to UI Isolate
+    service.invoke('statusUpdate', {
+      'isActive': isActive,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
   });
 }

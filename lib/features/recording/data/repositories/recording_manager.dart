@@ -1,39 +1,55 @@
 import 'dart:async';
 import 'package:isar/isar.dart';
+import 'package:logger/logger.dart';
 import '../datasources/recording_service.dart';
 import '../datasources/transcription_service.dart';
+import '../../../history/domain/models/audio_chunk.dart';
 
 class RecordingManager {
   final Isar isar;
-  late RecordingService _recordingService;
-  late TranscriptionService _transcriptionService;
-  Timer? _queueTimer;
+  final RecordingService _recordingService;
+  final TranscriptionService _transcriptionService;
+  final Logger _logger = Logger();
+  
+  StreamSubscription? _chunkWatcher;
 
-  RecordingManager(this.isar) {
-    _recordingService = RecordingService(isar);
-    _transcriptionService = TranscriptionService(isar);
-  }
+  RecordingManager(this.isar, this._recordingService, this._transcriptionService);
 
   Future<void> startRecording() async {
+    _logger.i("Manager: Starting Intelligence Unit...");
+    
+    // 1. Initialize hardware
     await _recordingService.init();
+    
+    // 2. Start gapless engine
     await _recordingService.start();
     
-    // Start transcription queue processor
-    _queueTimer = Timer.periodic(const Duration(minutes: 1), (_) {
-      _transcriptionService.processQueue();
+    // 3. Setup Event-Driven Transcription
+    // Watch for any AudioChunk where status becomes 'pending'
+    _chunkWatcher = isar.audioChunks
+        .where()
+        .filter()
+        .statusEqualTo(ChunkStatus.pending)
+        .watch(fireImmediately: true)
+        .listen((chunks) {
+      if (chunks.isNotEmpty) {
+        _logger.i("Manager: Event detected - ${chunks.length} chunks pending. triggering pipeline.");
+        _transcriptionService.processQueue();
+      }
     });
   }
 
   Future<void> stopRecording() async {
+    _logger.i("Manager: Stopping Intelligence Unit...");
+    _chunkWatcher?.cancel();
     await _recordingService.stop();
-    _queueTimer?.cancel();
     
-    // Final processing attempt
+    // Final processing pass to ensure no data is left behind
     await _transcriptionService.processQueue();
   }
 
   void dispose() {
+    _chunkWatcher?.cancel();
     _recordingService.dispose();
-    _queueTimer?.cancel();
   }
 }

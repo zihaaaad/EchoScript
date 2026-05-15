@@ -37,10 +37,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   Future<void> _loadSettings() async {
     final isar = ref.read(isarProvider);
+    final secureStorage = ref.read(secureStorageProvider);
+    
     final settings = await isar.appSettings.get(0);
+    final apiKey = await secureStorage.read(key: 'gemini_api_key');
+    
     if (settings != null) {
       setState(() {
-        _apiKeyController.text = settings.geminiApiKey ?? '';
+        _apiKeyController.text = apiKey ?? '';
         _promptController.text = settings.systemPrompt;
         _gain = settings.audioGainDb;
         _model = settings.geminiModel;
@@ -50,9 +54,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   Future<void> _saveSettings() async {
     final isar = ref.read(isarProvider);
+    final secureStorage = ref.read(secureStorageProvider);
+    
     final settings = await isar.appSettings.get(0) ?? AppSettings();
     
-    settings.geminiApiKey = _apiKeyController.text;
+    // 1. Save sensitive data to Secure Storage
+    await secureStorage.write(key: 'gemini_api_key', value: _apiKeyController.text);
+
+    // 2. Save non-sensitive data to Isar
     settings.systemPrompt = _promptController.text;
     settings.audioGainDb = _gain;
     settings.geminiModel = _model;
@@ -64,7 +73,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Settings updated"),
+          content: Text("Enterprise preferences synchronized"),
           backgroundColor: AppTheme.success,
         ),
       );
@@ -84,7 +93,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: ModernButton(
                 label: "Apply",
                 onTap: _saveSettings,
-                icon: Icons.check_rounded,
+                icon: Icons.lock_outline_rounded,
               ),
             ),
           ),
@@ -93,7 +102,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          _buildSectionHeader("AI CONFIGURATION"),
+          _buildSectionHeader("SECURE AI CONFIGURATION"),
           const SizedBox(height: 16),
           GlassCard(
             padding: const EdgeInsets.all(20),
@@ -102,7 +111,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 TextField(
                   controller: _apiKeyController,
                   obscureText: true,
-                  decoration: _inputDecoration("API Key", Icons.key_outlined),
+                  decoration: _inputDecoration("Gemini API Key", Icons.vpn_key_outlined),
                 ),
                 const SizedBox(height: 20),
                 DropdownButtonFormField<String>(
@@ -119,7 +128,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
           ),
           const SizedBox(height: 32),
-          _buildSectionHeader("AUDIO CONTROL"),
+          _buildSectionHeader("HARDWARE DSP"),
           const SizedBox(height: 16),
           GlassCard(
             padding: const EdgeInsets.all(20),
@@ -129,7 +138,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("Gain Adjustment", style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
+                    Text("Digital Gain", style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
                     Text("${_gain.toStringAsFixed(1)} dB", style: GoogleFonts.inter(color: AppTheme.primary, fontWeight: FontWeight.w700)),
                   ],
                 ),
@@ -151,13 +160,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             child: TextField(
               controller: _promptController,
               maxLines: 4,
-              decoration: _inputDecoration("Instructions", Icons.description_outlined),
+              decoration: _inputDecoration("Instructions", Icons.terminal_outlined),
             ),
           ),
           const SizedBox(height: 48),
           Center(
             child: Text(
-              "Version $_appVersion",
+              "EchoScript Enterprise v$_appVersion",
               style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 11),
             ),
           ),
@@ -171,9 +180,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       title,
       style: GoogleFonts.inter(
         fontSize: 11,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w900,
         color: AppTheme.textSecondary,
-        letterSpacing: 1,
+        letterSpacing: 1.5,
       ),
     );
   }
@@ -182,7 +191,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return InputDecoration(
       labelText: label,
       labelStyle: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 13),
-      prefixIcon: Icon(icon, color: AppTheme.textSecondary, size: 20),
+      prefixIcon: Icon(icon, color: AppTheme.primary, size: 20),
       border: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
       enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
       focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.primary)),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'features/history/domain/models/audio_chunk.dart';
 import 'features/settings/domain/models/app_settings.dart';
 import 'core/constants/constants.dart';
@@ -25,6 +26,7 @@ void main() async {
     ProviderScope(
       overrides: [
         isarProvider.overrideWithValue(isar),
+        secureStorageProvider.overrideWithValue(const FlutterSecureStorage()),
       ],
       child: const EchoScriptApp(),
     ),
@@ -32,6 +34,10 @@ void main() async {
 }
 
 final isarProvider = Provider<Isar>((ref) {
+  throw UnimplementedError();
+});
+
+final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
   throw UnimplementedError();
 });
 

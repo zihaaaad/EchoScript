@@ -22,23 +22,18 @@ const AppSettingsSchema = CollectionSchema(
       name: r'audioGainDb',
       type: IsarType.double,
     ),
-    r'geminiApiKey': PropertySchema(
-      id: 1,
-      name: r'geminiApiKey',
-      type: IsarType.string,
-    ),
     r'geminiModel': PropertySchema(
-      id: 2,
+      id: 1,
       name: r'geminiModel',
       type: IsarType.string,
     ),
     r'isRecordingActive': PropertySchema(
-      id: 3,
+      id: 2,
       name: r'isRecordingActive',
       type: IsarType.bool,
     ),
     r'systemPrompt': PropertySchema(
-      id: 4,
+      id: 3,
       name: r'systemPrompt',
       type: IsarType.string,
     )
@@ -63,12 +58,6 @@ int _appSettingsEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
-  {
-    final value = object.geminiApiKey;
-    if (value != null) {
-      bytesCount += 3 + value.length * 3;
-    }
-  }
   bytesCount += 3 + object.geminiModel.length * 3;
   bytesCount += 3 + object.systemPrompt.length * 3;
   return bytesCount;
@@ -81,10 +70,9 @@ void _appSettingsSerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeDouble(offsets[0], object.audioGainDb);
-  writer.writeString(offsets[1], object.geminiApiKey);
-  writer.writeString(offsets[2], object.geminiModel);
-  writer.writeBool(offsets[3], object.isRecordingActive);
-  writer.writeString(offsets[4], object.systemPrompt);
+  writer.writeString(offsets[1], object.geminiModel);
+  writer.writeBool(offsets[2], object.isRecordingActive);
+  writer.writeString(offsets[3], object.systemPrompt);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -95,11 +83,10 @@ AppSettings _appSettingsDeserialize(
 ) {
   final object = AppSettings();
   object.audioGainDb = reader.readDouble(offsets[0]);
-  object.geminiApiKey = reader.readStringOrNull(offsets[1]);
-  object.geminiModel = reader.readString(offsets[2]);
+  object.geminiModel = reader.readString(offsets[1]);
   object.id = id;
-  object.isRecordingActive = reader.readBool(offsets[3]);
-  object.systemPrompt = reader.readString(offsets[4]);
+  object.isRecordingActive = reader.readBool(offsets[2]);
+  object.systemPrompt = reader.readString(offsets[3]);
   return object;
 }
 
@@ -113,12 +100,10 @@ P _appSettingsDeserializeProp<P>(
     case 0:
       return (reader.readDouble(offset)) as P;
     case 1:
-      return (reader.readStringOrNull(offset)) as P;
-    case 2:
       return (reader.readString(offset)) as P;
-    case 3:
+    case 2:
       return (reader.readBool(offset)) as P;
-    case 4:
+    case 3:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -280,160 +265,6 @@ extension AppSettingsQueryFilter
         upper: upper,
         includeUpper: includeUpper,
         epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
-      geminiApiKeyIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'geminiApiKey',
-      ));
-    });
-  }
-
-  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
-      geminiApiKeyIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'geminiApiKey',
-      ));
-    });
-  }
-
-  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
-      geminiApiKeyEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'geminiApiKey',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
-      geminiApiKeyGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'geminiApiKey',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
-      geminiApiKeyLessThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'geminiApiKey',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
-      geminiApiKeyBetween(
-    String? lower,
-    String? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'geminiApiKey',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
-      geminiApiKeyStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'geminiApiKey',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
-      geminiApiKeyEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'geminiApiKey',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
-      geminiApiKeyContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'geminiApiKey',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
-      geminiApiKeyMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'geminiApiKey',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
-      geminiApiKeyIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'geminiApiKey',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
-      geminiApiKeyIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'geminiApiKey',
-        value: '',
       ));
     });
   }
@@ -794,19 +625,6 @@ extension AppSettingsQuerySortBy
     });
   }
 
-  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByGeminiApiKey() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'geminiApiKey', Sort.asc);
-    });
-  }
-
-  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
-      sortByGeminiApiKeyDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'geminiApiKey', Sort.desc);
-    });
-  }
-
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByGeminiModel() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'geminiModel', Sort.asc);
@@ -858,19 +676,6 @@ extension AppSettingsQuerySortThenBy
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByAudioGainDbDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'audioGainDb', Sort.desc);
-    });
-  }
-
-  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByGeminiApiKey() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'geminiApiKey', Sort.asc);
-    });
-  }
-
-  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
-      thenByGeminiApiKeyDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'geminiApiKey', Sort.desc);
     });
   }
 
@@ -934,13 +739,6 @@ extension AppSettingsQueryWhereDistinct
     });
   }
 
-  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByGeminiApiKey(
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'geminiApiKey', caseSensitive: caseSensitive);
-    });
-  }
-
   QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByGeminiModel(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -974,12 +772,6 @@ extension AppSettingsQueryProperty
   QueryBuilder<AppSettings, double, QQueryOperations> audioGainDbProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'audioGainDb');
-    });
-  }
-
-  QueryBuilder<AppSettings, String?, QQueryOperations> geminiApiKeyProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'geminiApiKey');
     });
   }
 
