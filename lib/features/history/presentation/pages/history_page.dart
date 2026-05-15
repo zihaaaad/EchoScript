@@ -266,6 +266,7 @@ class _DetailView extends StatelessWidget {
                   "Time: $formattedTime\n\n"
                   "Transcription:\n"
                   "${chunk.transcription ?? 'No transcription available.'}";
+              // ignore: deprecated_member_use
               Share.share(text, subject: 'EchoScript Intelligence - $formattedDate');
             },
           ),
