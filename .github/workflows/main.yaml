@@ -32,8 +32,15 @@ jobs:
       - name: Patch Isar Manifest for AGP 8+ Compatibility
         run: |
           for manifest in $(find ~/.pub-cache -name "AndroidManifest.xml" -path "*isar*"); do
+            echo "Patching $manifest"
+            # Remove package attribute
             sed -i 's/package="dev\.isar\.isar_flutter_libs"//g' "$manifest"
-            sed -i 's/<manifest/<manifest xmlns:tools="http:\/\/schemas.android.com\/tools"/' "$manifest"
+            # Ensure xmlns:tools exists for merge rules
+            if ! grep -q "xmlns:tools" "$manifest"; then
+              sed -i 's/<manifest/<manifest xmlns:tools="http:\/\/schemas.android.com\/tools"/' "$manifest"
+            fi
+            # Basic validation: ensure it still looks like XML
+            head -n 1 "$manifest" | grep -q "<manifest" || (echo "ERROR: Broken manifest" && exit 1)
           done
 
       - name: Analyze Project
