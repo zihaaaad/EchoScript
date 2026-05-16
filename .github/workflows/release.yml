@@ -26,6 +26,10 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
+      - name: Patch Isar Manifest
+        run: |
+          find ~/.pub-cache -name "AndroidManifest.xml" -path "*/isar_flutter_libs*/android/src/main/AndroidManifest.xml" -exec sed -i 's/package="dev.isar.isar_flutter_libs"//g' {} +
+
       - name: Build APK
         run: flutter build apk --release
 
