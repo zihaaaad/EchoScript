@@ -10,9 +10,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../settings/domain/models/app_settings.dart';
 import '../../../settings/presentation/pages/settings_page.dart';
 import '../../../history/presentation/pages/history_page.dart';
-import 'package:disk_space_2/disk_space_2.dart';
 import '../../../../core/utils/permission_manager.dart';
-import '../widgets/analytics_dashboard.dart';
+import '../widgets/system_health_module.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
@@ -182,40 +181,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             title: 'Session Time',
             child: StatusMonitor(),
           ),
-          BentoModule(
-            title: 'Storage',
-            child: FutureBuilder<double?>(
-              future: DiskSpace.getFreeDiskSpace,
-              builder: (context, snapshot) {
-                final space = snapshot.data; // Value is in MB
-                final display = space != null 
-                    ? space > 1024 
-                        ? '${(space / 1024).toStringAsFixed(1)} GB' 
-                        : '${space.toStringAsFixed(0)} MB'
-                    : '--';
-                
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.storage_rounded, color: AppTheme.accent, size: 28),
-                    const SizedBox(height: 8),
-                    Text(
-                      display,
-                      style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
-                    ),
-                    Text(
-                      'Available',
-                      style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textSecondary),
-                    ),
-                  ],
-                );
-              },
-            ),
+          const BentoModule(
+            title: 'System Health',
+            child: SystemHealthModule(),
           ),
         ],
       ),
       const SizedBox(height: 16),
-      const AnalyticsDashboard(),
     ],
   );
 

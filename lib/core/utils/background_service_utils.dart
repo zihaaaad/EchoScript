@@ -15,6 +15,7 @@ import '../../features/recording/data/repositories/isar_transcription_repositori
 import '../../features/recording/data/datasources/recording_service.dart';
 import '../../features/recording/data/datasources/transcription_service.dart';
 import '../constants/constants.dart';
+import 'diagnostic_service.dart';
 
 Future<void> initializeBackgroundService() async {
   final service = FlutterBackgroundService();
@@ -60,6 +61,11 @@ void onStart(ServiceInstance service) async {
     secureStorage: secureStorage,
   );
   final manager = RecordingManager(isar, recordingService, transcriptionService);
+  final diagnosticService = DiagnosticService(
+    transcriptionService: transcriptionService,
+    secureStorage: secureStorage,
+    isar: isar,
+  );
 
   // Broadcast dB changes to UI Isolate
   recordingService.onDbChanged.listen((db) {
@@ -123,5 +129,14 @@ void onStart(ServiceInstance service) async {
     await transcriptionService.purgeOldData();
     // Also trigger queue processing for any missed/failed chunks
     await transcriptionService.processQueue();
+    
+    // Background health check
+    final health = await diagnosticService.runFullDiagnostics();
+    if (health.overallStatus == DiagnosticStatus.critical && service is AndroidServiceInstance) {
+      service.setForegroundNotificationInfo(
+        title: 'EchoScript: SYSTEM ISSUE',
+        content: 'Critical failure detected. Open app to fix.',
+      );
+    }
   });
 }
