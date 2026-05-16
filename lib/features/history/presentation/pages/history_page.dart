@@ -27,8 +27,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -75,7 +74,6 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         ],
       ),
     );
-  }
 
   Widget _buildTranscriptList() {
     final isar = ref.watch(isarProvider);
@@ -109,9 +107,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
           physics: const BouncingScrollPhysics(),
           itemCount: chunks.length,
           separatorBuilder: (context, index) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            return _TranscriptCard(chunk: chunks[index]);
-          },
+          itemBuilder: (context, index) => _TranscriptCard(chunk: chunks[index]),
         );
       },
     );

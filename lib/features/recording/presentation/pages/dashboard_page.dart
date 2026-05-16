@@ -478,8 +478,8 @@ class LiveAudioVisualizer extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: List.generate(32, (index) {
         // Pseudo-random but deterministic animation base
-        final double baseHeight = 0.2 + (math.sin(index * 0.5) * 0.1).abs();
-        final double height = (baseHeight + normalized * 0.8) * 60;
+        final baseHeight = 0.2 + (math.sin(index * 0.5) * 0.1).abs();
+        final height = (baseHeight + normalized * 0.8) * 60;
         
         return AnimatedContainer(
           duration: const Duration(milliseconds: 100),

@@ -92,8 +92,8 @@ class RecordingService {
     await _openNewFileSink();
 
     final settings = await isar.appSettings.get(0);
-    final double gainDb = settings?.audioGainDb ?? 0.0;
-    final double multiplier = _getGainMultiplier(gainDb);
+    final gainDb = settings?.audioGainDb ?? 0.0;
+    final multiplier = _getGainMultiplier(gainDb);
 
     await _recorder!.startRecorder(
       toStream: streamController.sink,
@@ -104,7 +104,7 @@ class RecordingService {
 
     streamController.stream.listen((data) {
       try {
-        Uint8List processedData = data;
+        var processedData = data;
         
         if (multiplier != 1.0) {
           processedData = _applyGain(data, multiplier);
@@ -126,13 +126,13 @@ class RecordingService {
 
     double sumSquared = 0;
     for (var i = 0; i < samples.length; i++) {
-      final double sample = samples[i].toDouble();
+      final sample = samples[i].toDouble();
       sumSquared += sample * sample;
     }
     
-    final double rms = math.sqrt(sumSquared / samples.length);
+    final rms = math.sqrt(sumSquared / samples.length);
     // Reference for PCM 16-bit is 32768
-    double db = rms > 0 ? 20 * math.log(rms / 32768.0) / math.ln10 : -60.0;
+    var db = rms > 0 ? 20 * math.log(rms / 32768.0) / math.ln10 : -60.0;
     
     // Normalize for UI (clamp between -60 and 0)
     if (db < -60) db = -60;
@@ -147,11 +147,11 @@ class RecordingService {
   }
 
   Uint8List _applyGain(Uint8List rawData, double multiplier) {
-    final Int16List samples = rawData.buffer.asInt16List();
-    final Int16List processedSamples = Int16List(samples.length);
+    final samples = rawData.buffer.asInt16List();
+    final processedSamples = Int16List(samples.length);
     
-    for (int i = 0; i < samples.length; i++) {
-      int value = (samples[i] * multiplier).toInt();
+    for (var i = 0; i < samples.length; i++) {
+      var value = (samples[i] * multiplier).toInt();
       // Clip to Int16 range
       if (value > 32767) value = 32767;
       if (value < -32768) value = -32768;
@@ -261,10 +261,10 @@ class RecordingService {
   }
 
   Uint8List _createWavHeader(int pcmLength) {
-    const int sampleRate = AppConstants.sampleRate;
-    const int channels = 1;
-    const int byteRate = sampleRate * channels * 2;
-    const int blockAlign = channels * 2;
+    const sampleRate = AppConstants.sampleRate;
+    const channels = 1;
+    const byteRate = sampleRate * channels * 2;
+    const blockAlign = channels * 2;
     
     final header = ByteData(44);
     

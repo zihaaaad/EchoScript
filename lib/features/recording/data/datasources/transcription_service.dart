@@ -50,7 +50,7 @@ class TranscriptionService {
       final twentyFourHoursAgo = DateTime.now().subtract(const Duration(hours: 24));
       final oldChunks = await chunkRepo.getChunksOlderThan(twentyFourHoursAgo);
       
-      int deletedFiles = 0;
+      var deletedFiles = 0;
       for (final chunk in oldChunks) {
         final file = File(chunk.filePath);
         if (await file.exists()) {
@@ -73,7 +73,7 @@ class TranscriptionService {
     _isProcessing = true;
 
     try {
-      final AppSettings? settings = await settingsRepo.getSettings() as AppSettings?;
+      final settings = await settingsRepo.getSettings() as AppSettings?;
       if (settings == null) return;
 
       final apiKey = await secureStorage.read(key: 'gemini_api_key');

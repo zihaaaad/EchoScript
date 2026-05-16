@@ -88,8 +88,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -140,10 +139,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         },
       ),
     );
-  }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
+  Widget _buildSectionTitle(String title) => Text(
       title.toUpperCase(),
       style: GoogleFonts.inter(
         fontSize: 12,
@@ -152,10 +149,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         letterSpacing: 1,
       ),
     );
-  }
 
-  Widget _buildApiKeyField(AppSettings settings) {
-    return Container(
+  Widget _buildApiKeyField(AppSettings settings) => Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface,
@@ -219,10 +214,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ],
       ),
     );
-  }
 
-  Widget _buildModelSelector(AppSettings settings) {
-    return Container(
+  Widget _buildModelSelector(AppSettings settings) => Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface,
@@ -267,10 +260,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ],
       ),
     );
-  }
 
-  Widget _buildSystemPromptField() {
-    return Container(
+  Widget _buildSystemPromptField() => Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface,
@@ -307,10 +298,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ],
       ),
     );
-  }
 
-  Widget _buildAudioGainSlider(AppSettings settings) {
-    return Container(
+  Widget _buildAudioGainSlider(AppSettings settings) => Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface,
@@ -354,10 +343,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ],
       ),
     );
-  }
 
-  Widget _buildChunkDurationSelector(AppSettings settings) {
-    return Container(
+  Widget _buildChunkDurationSelector(AppSettings settings) => Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface,
@@ -401,10 +388,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ],
       ),
     );
-  }
 
-  Widget _buildConcurrencySlider(AppSettings settings) {
-    return Container(
+  Widget _buildConcurrencySlider(AppSettings settings) => Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface,
@@ -448,5 +433,4 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ],
       ),
     );
-  }
 }
