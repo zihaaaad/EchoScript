@@ -11,6 +11,7 @@ import '../../../settings/domain/models/app_settings.dart';
 import '../../../settings/presentation/pages/settings_page.dart';
 import '../../../history/presentation/pages/history_page.dart';
 import '../../../../core/utils/permission_manager.dart';
+import '../widgets/analytics_dashboard.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
@@ -166,38 +167,44 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       ),
     );
 
-  Widget _buildBentoGrid() => GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
-      childAspectRatio: 1.1,
-      children: [
-        const BentoModule(
-          title: 'Session Time',
-          child: StatusMonitor(),
-        ),
-        BentoModule(
-          title: 'Storage',
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.storage_rounded, color: AppTheme.accent, size: 28),
-              const SizedBox(height: 8),
-              Text(
-                '2.4 GB', // Placeholder: Requires storage_capacity package for real data
-                style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
-              ),
-              Text(
-                'Available',
-                style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textSecondary),
-              ),
-            ],
+  Widget _buildBentoGrid() => Column(
+    children: [
+      GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: 2,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+        childAspectRatio: 1.1,
+        children: [
+          const BentoModule(
+            title: 'Session Time',
+            child: StatusMonitor(),
           ),
-        ),
-      ],
-    );
+          BentoModule(
+            title: 'Storage',
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.storage_rounded, color: AppTheme.accent, size: 28),
+                const SizedBox(height: 8),
+                Text(
+                  '2.4 GB', // Placeholder: Requires platform package for real disk data
+                  style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                ),
+                Text(
+                  'Available',
+                  style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      const AnalyticsDashboard(),
+    ],
+  );
 
   Widget _buildRecentActivity() => Container(
       width: double.infinity,

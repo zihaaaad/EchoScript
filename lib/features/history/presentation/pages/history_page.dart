@@ -79,11 +79,10 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     final isar = ref.watch(isarProvider);
     
     final query = _searchQuery.isEmpty 
-      ? isar.audioChunks.where().sortByStartTimeDesc().build()
+      ? isar.audioChunks.where().sortByStartTimeDesc()
       : isar.audioChunks.filter()
           .transcriptionWordsElementStartsWith(_searchQuery, caseSensitive: false)
-          .sortByStartTimeDesc()
-          .build();
+          .sortByStartTimeDesc();
 
     return StreamBuilder<List<AudioChunk>>(
       stream: query.watch(fireImmediately: true),

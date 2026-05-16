@@ -24,6 +24,18 @@ class IsarAudioChunkRepository implements AudioChunkRepository {
           .findAll();
 
   @override
+  Future<List<AudioChunk>> getCompletedChunksToday() async {
+    final today = DateTime.now();
+    final startOfToday = DateTime(today.year, today.month, today.day);
+    return isar.audioChunks
+        .filter()
+        .statusEqualTo(ChunkStatus.completed)
+        .and()
+        .startTimeGreaterThan(startOfToday)
+        .findAll();
+  }
+
+  @override
   Future<List<AudioChunk>> getChunksOlderThan(DateTime time) async =>
       isar.audioChunks.filter().startTimeLessThan(time).findAll();
 
