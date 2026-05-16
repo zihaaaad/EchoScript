@@ -23,7 +23,7 @@ subprojects {
             if (android.namespace == null) {
                 android.namespace = "com.google.dev.echoscript.${project.name.replace("-", "_")}"
             }
-            android.compileSdkVersion(36)
+            android.compileSdkVersion(34)
         }
     }
 }
