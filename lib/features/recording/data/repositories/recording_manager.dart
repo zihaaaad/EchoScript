@@ -16,7 +16,7 @@ class RecordingManager {
   RecordingManager(this.isar, this._recordingService, this._transcriptionService);
 
   Future<void> startRecording() async {
-    _logger.i("Manager: Starting Intelligence Unit...");
+    _logger.i('Manager: Starting Intelligence Unit...');
     
     // 1. Initialize hardware
     await _recordingService.init();
@@ -33,15 +33,15 @@ class RecordingManager {
         .watch(fireImmediately: true)
         .listen((chunks) {
       if (chunks.isNotEmpty) {
-        _logger.i("Manager: Event detected - ${chunks.length} chunks pending. triggering pipeline.");
-        _transcriptionService.processQueue();
+        _logger.i('Manager: Event detected - ${chunks.length} chunks pending. triggering pipeline.');
+        unawaited(_transcriptionService.processQueue());
       }
     });
   }
 
   Future<void> stopRecording() async {
-    _logger.i("Manager: Stopping Intelligence Unit...");
-    _chunkWatcher?.cancel();
+    _logger.i('Manager: Stopping Intelligence Unit...');
+    await _chunkWatcher?.cancel();
     await _recordingService.stop();
     
     // Final processing pass to ensure no data is left behind

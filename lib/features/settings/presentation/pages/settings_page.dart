@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../main.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/providers/providers.dart';
 import '../../domain/models/app_settings.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -16,64 +16,72 @@ class SettingsPage extends ConsumerStatefulWidget {
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   final _apiKeyController = TextEditingController();
   final _promptController = TextEditingController();
-  double _gain = 0.0;
-  int _concurrency = 2;
-  int _chunkDuration = 30;
-  String _model = 'gemini-2.5-flash';
-  String _appVersion = '';
+  bool _isObscured = true;
+  bool _isTesting = false;
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
-    _loadVersion();
   }
 
-  Future<void> _loadVersion() async {
-    final info = await PackageInfo.fromPlatform();
-    setState(() => _appVersion = '${info.version}+${info.buildNumber}');
+  @override
+  void dispose() {
+    _apiKeyController.dispose();
+    _promptController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadSettings() async {
+    final storage = ref.read(secureStorageProvider);
+    final key = await storage.read(key: 'gemini_api_key');
+    if (key != null && mounted) {
+      _apiKeyController.text = key;
+    }
+
     final isar = ref.read(isarProvider);
-    final secureStorage = ref.read(secureStorageProvider);
     final settings = await isar.appSettings.get(0);
-    final apiKey = await secureStorage.read(key: 'gemini_api_key');
-    
-    if (settings != null) {
-      setState(() {
-        _apiKeyController.text = apiKey ?? '';
-        _promptController.text = settings.systemPrompt;
-        _gain = settings.audioGainDb;
-        _model = settings.geminiModel;
-        _concurrency = settings.aiConcurrencyLimit;
-        _chunkDuration = settings.chunkDurationMinutes;
-      });
+    if (settings != null && mounted) {
+      _promptController.text = settings.systemPrompt;
     }
   }
 
-  Future<void> _saveSettings() async {
-    final isar = ref.read(isarProvider);
-    final secureStorage = ref.read(secureStorageProvider);
-    final settings = await isar.appSettings.get(0) ?? AppSettings();
-    
-    await secureStorage.write(key: 'gemini_api_key', value: _apiKeyController.text);
-    settings.systemPrompt = _promptController.text;
-    settings.audioGainDb = _gain;
-    settings.geminiModel = _model;
-    settings.aiConcurrencyLimit = _concurrency;
-    settings.chunkDurationMinutes = _chunkDuration;
+  Future<void> _saveApiKey(String key) async {
+    final storage = ref.read(secureStorageProvider);
+    await storage.write(key: 'gemini_api_key', value: key);
+  }
 
+  Future<void> _updateSettings(void Function(AppSettings) updateBlock) async {
+    final isar = ref.read(isarProvider);
     await isar.writeTxn(() async {
+      final settings = await isar.appSettings.get(0) ?? AppSettings();
+      updateBlock(settings);
       await isar.appSettings.put(settings);
     });
-    
-    if (mounted) {
+  }
+
+  Future<void> _testConnection(AppSettings settings) async {
+    if (_apiKeyController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Cloud synchronicity confirmed"),
-          backgroundColor: AppTheme.success,
-          behavior: SnackBarBehavior.floating,
+        const SnackBar(content: Text('Please enter an API Key first')),
+      );
+      return;
+    }
+
+    setState(() => _isTesting = true);
+    
+    final transcriptionService = ref.read(transcriptionServiceProvider);
+    final success = await transcriptionService.testApiKey(
+      _apiKeyController.text, 
+      settings.geminiModel,
+    );
+
+    if (mounted) {
+      setState(() => _isTesting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? 'Connection Successful!' : 'Connection Failed. Check your key and model.'),
+          backgroundColor: success ? AppTheme.success : AppTheme.error,
         ),
       );
     }
@@ -87,190 +95,365 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: AppTheme.textSecondary),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          "Control Center",
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+          'Settings',
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.textPrimary,
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: _saveSettings,
-            child: Text(
-              "SYNC",
-              style: GoogleFonts.inter(color: AppTheme.primary, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1),
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      body: StreamBuilder<AppSettings?>(
+        stream: ref.watch(isarProvider).appSettings.watchObject(0, fireImmediately: true),
+        builder: (context, snapshot) {
+          final settings = snapshot.data ?? AppSettings();
+
+          return ListView(
+            padding: const EdgeInsets.all(20),
+            physics: const BouncingScrollPhysics(),
+            children: [
+              _buildSectionTitle('AI Configuration'),
+              const SizedBox(height: 16),
+              _buildApiKeyField(settings),
+              const SizedBox(height: 16),
+              _buildModelSelector(settings),
+              const SizedBox(height: 16),
+              _buildSystemPromptField(),
+              const SizedBox(height: 32),
+              
+              _buildSectionTitle('Audio & Recording'),
+              const SizedBox(height: 16),
+              _buildAudioGainSlider(settings),
+              const SizedBox(height: 16),
+              _buildChunkDurationSelector(settings),
+              const SizedBox(height: 32),
+              
+              _buildSectionTitle('Performance'),
+              const SizedBox(height: 16),
+              _buildConcurrencySlider(settings),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title.toUpperCase(),
+      style: GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        color: AppTheme.textSecondary,
+        letterSpacing: 1,
+      ),
+    );
+  }
+
+  Widget _buildApiKeyField(AppSettings settings) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildBentoSection(
-            "Intelligence Engine",
-            Column(
-              children: [
-                _buildTextField("Gemini API Key", _apiKeyController, isPassword: true),
-                const SizedBox(height: 24),
-                _buildDropdown("Processor Model", _model, (val) => setState(() => _model = val!)),
-              ],
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Gemini API Key',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              _isTesting 
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : TextButton(
+                    onPressed: () => _testConnection(settings),
+                    child: Text(
+                      'Test Connection',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primary,
+                      ),
+                    ),
+                  ),
+            ],
           ),
-          const SizedBox(height: 20),
-          _buildBentoSection(
-            "Hardware DSP",
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("Software Gain", style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-                    Text("${_gain.toStringAsFixed(1)} dB", style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.primary)),
-                  ],
+          const SizedBox(height: 8),
+          TextField(
+            controller: _apiKeyController,
+            obscureText: _isObscured,
+            style: GoogleFonts.inter(color: AppTheme.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Enter API Key',
+              hintStyle: GoogleFonts.inter(color: AppTheme.textSecondary.withValues(alpha: 0.5)),
+              filled: true,
+              fillColor: AppTheme.background,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _isObscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  color: AppTheme.textSecondary,
                 ),
-                const SizedBox(height: 8),
-                Slider(
-                  value: _gain,
-                  min: -12.0,
-                  max: 24.0,
-                  divisions: 36,
-                  onChanged: (val) => setState(() => _gain = val),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          _buildBentoSection(
-            "Hardware Optimization",
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("AI Concurrency", style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-                    Text("$_concurrency Units", style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.primary)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Slider(
-                  value: _concurrency.toDouble(),
-                  min: 1,
-                  max: 5,
-                  divisions: 4,
-                  onChanged: (val) => setState(() => _concurrency = val.toInt()),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("Chunk Rotation", style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-                    Text("$_chunkDuration Min", style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.primary)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Slider(
-                  value: _chunkDuration.toDouble(),
-                  min: 1,
-                  max: 60,
-                  divisions: 59,
-                  onChanged: (val) => setState(() => _chunkDuration = val.toInt()),
-                ),
-                Text(
-                  "Defines the duration of audio segments. Higher units increase throughput but require more device RAM and stable network.",
-                  style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textSecondary),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          _buildBentoSection(
-            "System Protocols",
-            _buildTextField("Core Instructions", _promptController, maxLines: 4),
-          ),
-          const SizedBox(height: 60),
-          Center(
-            child: Opacity(
-              opacity: 0.5,
-              child: Text(
-                "ECHOSCRIPT ENTERPRISE v$_appVersion",
-                style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 2, color: AppTheme.textSecondary),
+                onPressed: () => setState(() => _isObscured = !_isObscured),
               ),
             ),
+            onChanged: _saveApiKey,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBentoSection(String title, Widget content) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 8, bottom: 8),
-          child: Text(
-            title.toUpperCase(),
-            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textSecondary, letterSpacing: 1),
+  Widget _buildModelSelector(AppSettings settings) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Model Version',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
           ),
-        ),
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: settings.geminiModel,
+            dropdownColor: AppTheme.surface,
+            style: GoogleFonts.inter(color: AppTheme.textPrimary),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: AppTheme.background,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'gemini-1.5-flash', child: Text('Gemini 1.5 Flash (Fast)')),
+              DropdownMenuItem(value: 'gemini-1.5-pro', child: Text('Gemini 1.5 Pro (Accurate)')),
+              DropdownMenuItem(value: 'gemini-2.5-flash', child: Text('Gemini 2.5 Flash (Latest)')),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                _updateSettings((s) => s.geminiModel = value);
+              }
+            },
           ),
-          child: content,
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {bool isPassword = false, int maxLines = 1}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
-        TextField(
-          controller: controller,
-          obscureText: isPassword,
-          maxLines: maxLines,
-          style: GoogleFonts.inter(fontSize: 15, color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
-          decoration: InputDecoration(
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(vertical: 12),
-            enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white12)),
-            focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.primary, width: 2)),
+  Widget _buildSystemPromptField() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'System Prompt',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          TextField(
+            controller: _promptController,
+            maxLines: 3,
+            style: GoogleFonts.inter(color: AppTheme.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Enter system prompt...',
+              filled: true,
+              fillColor: AppTheme.background,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            onChanged: (value) {
+              _updateSettings((s) => s.systemPrompt = value);
+            },
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildDropdown(String label, String value, Function(String?) onChanged) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
-        DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          underline: Container(height: 1, color: Colors.white12),
-          dropdownColor: AppTheme.surface,
-          items: const [
-            DropdownMenuItem(value: 'gemini-2.5-flash', child: Text('2.5 Flash (Recommended)')),
-            DropdownMenuItem(value: 'gemini-2.5-pro', child: Text('2.5 Pro (Deep Reasoning)')),
-            DropdownMenuItem(value: 'gemini-3.1-flash-lite', child: Text('3.1 Flash-Lite (Fastest)')),
-            DropdownMenuItem(value: 'gemini-1.5-flash', child: Text('1.5 Flash (Deprecated/Legacy)')),
-            DropdownMenuItem(value: 'gemini-1.5-pro', child: Text('1.5 Pro (Deprecated/Legacy)')),
-          ],
-          onChanged: onChanged,
-        ),
-      ],
+  Widget _buildAudioGainSlider(AppSettings settings) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Software Audio Gain',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              Text(
+                '${settings.audioGainDb > 0 ? '+' : ''}${settings.audioGainDb.toStringAsFixed(1)} dB',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Slider(
+            value: settings.audioGainDb,
+            min: -12.0,
+            max: 24.0,
+            divisions: 36,
+            activeColor: AppTheme.primary,
+            inactiveColor: AppTheme.background,
+            onChanged: (value) {
+              _updateSettings((s) => s.audioGainDb = value);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChunkDurationSelector(AppSettings settings) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Chunk Duration',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              Text(
+                '${settings.chunkDurationMinutes} min',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Slider(
+            value: settings.chunkDurationMinutes.toDouble(),
+            min: 5.0,
+            max: 60.0,
+            divisions: 11, // 5, 10, 15...
+            activeColor: AppTheme.accent,
+            inactiveColor: AppTheme.background,
+            onChanged: (value) {
+              _updateSettings((s) => s.chunkDurationMinutes = value.toInt());
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConcurrencySlider(AppSettings settings) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Concurrent Transcriptions',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              Text(
+                '${settings.aiConcurrencyLimit}',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Slider(
+            value: settings.aiConcurrencyLimit.toDouble(),
+            min: 1.0,
+            max: 5.0,
+            divisions: 4,
+            activeColor: AppTheme.primary,
+            inactiveColor: AppTheme.background,
+            onChanged: (value) {
+              _updateSettings((s) => s.aiConcurrencyLimit = value.toInt());
+            },
+          ),
+        ],
+      ),
     );
   }
 }

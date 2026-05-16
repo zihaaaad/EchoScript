@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:math' as math;
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
@@ -23,6 +24,9 @@ class RecordingService {
   int _currentByteCount = 0;
   bool _shouldBeRecording = false;
   StreamSubscription? _interruptionSubscription;
+  final _dbController = StreamController<double>.broadcast();
+
+  Stream<double> get onDbChanged => _dbController.stream;
 
   RecordingService(this.isar);
 
@@ -38,7 +42,7 @@ class RecordingService {
       avAudioSessionMode: AVAudioSessionMode.defaultMode,
       avAudioSessionRouteSharingPolicy: AVAudioSessionRouteSharingPolicy.defaultPolicy,
       avAudioSessionSetActiveOptions: AVAudioSessionSetActiveOptions.none,
-      androidAudioAttributes: AndroidAudioAttributes(
+      androidAudioAttributes: const AndroidAudioAttributes(
         contentType: AndroidAudioContentType.speech,
         flags: AndroidAudioFlags.none,
         usage: AndroidAudioUsage.voiceCommunication,
@@ -49,10 +53,10 @@ class RecordingService {
 
     _interruptionSubscription = session.interruptionEventStream.listen((event) {
       if (event.begin) {
-        _logger.w("Recording: Hardware hijacked (Interruption began)");
+        _logger.w('Recording: Hardware hijacked (Interruption began)');
         _pauseInternal();
       } else {
-        _logger.i("Recording: Hardware available (Interruption ended)");
+        _logger.i('Recording: Hardware available (Interruption ended)');
         if (_shouldBeRecording) {
           _resumeInternal();
         }
@@ -75,10 +79,10 @@ class RecordingService {
           (_) => _rotateChunk(),
         );
       } else {
-        _logger.e("Recording: Microphone permission denied");
+        _logger.e('Recording: Microphone permission denied');
       }
     } catch (e, stack) {
-      _logger.e("Recording: Failed to start", error: e, stackTrace: stack);
+      _logger.e('Recording: Failed to start', error: e, stackTrace: stack);
     }
   }
 
@@ -86,6 +90,10 @@ class RecordingService {
     final streamController = StreamController<Uint8List>();
     
     await _openNewFileSink();
+
+    final settings = await isar.appSettings.get(0);
+    final double gainDb = settings?.audioGainDb ?? 0.0;
+    final double multiplier = _getGainMultiplier(gainDb);
 
     await _recorder!.startRecorder(
       toStream: streamController.sink,
@@ -95,21 +103,74 @@ class RecordingService {
     );
 
     streamController.stream.listen((data) {
-      _currentSink?.add(data);
-      _currentByteCount += data.length;
+      try {
+        Uint8List processedData = data;
+        
+        if (multiplier != 1.0) {
+          processedData = _applyGain(data, multiplier);
+        }
+        
+        _calculateAndEmitDb(processedData);
+        
+        _currentSink?.add(processedData);
+        _currentByteCount += processedData.length;
+      } catch (e, stack) {
+        _logger.e('Recording: Error processing or writing audio chunk', error: e, stackTrace: stack);
+      }
     });
+  }
+
+  void _calculateAndEmitDb(Uint8List data) {
+    final samples = data.buffer.asInt16List();
+    if (samples.isEmpty) return;
+
+    double sumSquared = 0;
+    for (var i = 0; i < samples.length; i++) {
+      final double sample = samples[i].toDouble();
+      sumSquared += sample * sample;
+    }
+    
+    final double rms = math.sqrt(sumSquared / samples.length);
+    // Reference for PCM 16-bit is 32768
+    double db = rms > 0 ? 20 * math.log(rms / 32768.0) / math.ln10 : -60.0;
+    
+    // Normalize for UI (clamp between -60 and 0)
+    if (db < -60) db = -60;
+    if (db > 0) db = 0;
+    
+    _dbController.add(db);
+  }
+
+  double _getGainMultiplier(double db) {
+    if (db == 0.0) return 1.0;
+    return math.pow(10, db / 20).toDouble();
+  }
+
+  Uint8List _applyGain(Uint8List rawData, double multiplier) {
+    final Int16List samples = rawData.buffer.asInt16List();
+    final Int16List processedSamples = Int16List(samples.length);
+    
+    for (int i = 0; i < samples.length; i++) {
+      int value = (samples[i] * multiplier).toInt();
+      // Clip to Int16 range
+      if (value > 32767) value = 32767;
+      if (value < -32768) value = -32768;
+      processedSamples[i] = value;
+    }
+    
+    return processedSamples.buffer.asUint8List();
   }
 
   void _pauseInternal() async {
     if (_recorder?.isRecording ?? false) {
       await _recorder!.stopRecorder();
-      _logger.i("Recording: Paused due to hijack");
+      _logger.i('Recording: Paused due to hijack');
     }
   }
 
   void _resumeInternal() async {
     if (_shouldBeRecording && !(_recorder?.isRecording ?? false)) {
-      _logger.i("Recording: Resuming capture...");
+      _logger.i('Recording: Resuming capture...');
       await _startGaplessRecording();
     }
   }
@@ -117,6 +178,20 @@ class RecordingService {
   Future<void> _openNewFileSink() async {
     try {
       final dir = await getTemporaryDirectory();
+      
+      // Proactive storage safety check
+      // Try to create a tiny sentinel file to ensure we have write permissions and space
+      final sentinel = File('${dir.path}/.storage_sentinel');
+      try {
+        await sentinel.writeAsString('OK');
+      } catch (e) {
+        if (e is OSError && e.errorCode == 28) {
+          _logger.e('Recording: CRITICAL - Storage overflow detected (No space left on device)');
+          await stop();
+          return;
+        }
+      }
+
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final newPath = '${dir.path}/chunk_$timestamp.wav'; 
       final startTime = DateTime.now();
@@ -138,15 +213,15 @@ class RecordingService {
       // Write placeholder for WAV header (44 bytes)
       _currentSink!.add(Uint8List(44)); 
       
-      _logger.i("Recording: Opened new sink at $_currentPath");
+      _logger.i('Recording: Opened new sink at $_currentPath');
     } catch (e, stack) {
-      _logger.e("Recording: Critical failure opening new sink", error: e, stackTrace: stack);
+      _logger.e('Recording: Critical failure opening new sink', error: e, stackTrace: stack);
       await stop(); // Shutdown to prevent data loss/null sink streaming
     }
   }
 
   Future<void> _rotateChunk() async {
-    _logger.i("Recording: Rotating chunk gaplessly...");
+    _logger.i('Recording: Rotating chunk gaplessly...');
     final oldSink = _currentSink;
     final oldPath = _currentPath;
     final oldChunkId = _currentChunkId;
@@ -170,7 +245,7 @@ class RecordingService {
         }
       }
     } catch (e) {
-      _logger.e("Recording: Rotation failure", error: e);
+      _logger.e('Recording: Rotation failure', error: e);
       // Ensure old sink is closed if new one fails and we stop
       await oldSink?.close();
     }
@@ -182,14 +257,14 @@ class RecordingService {
     final header = _createWavHeader(byteCount);
     await raf.writeFrom(header);
     await raf.close();
-    _logger.i("Recording: Finalized WAV header for $path ($byteCount bytes)");
+    _logger.i('Recording: Finalized WAV header for $path ($byteCount bytes)');
   }
 
   Uint8List _createWavHeader(int pcmLength) {
-    final int sampleRate = AppConstants.sampleRate;
-    final int channels = 1;
-    final int byteRate = sampleRate * channels * 2;
-    final int blockAlign = channels * 2;
+    const int sampleRate = AppConstants.sampleRate;
+    const int channels = 1;
+    const int byteRate = sampleRate * channels * 2;
+    const int blockAlign = channels * 2;
     
     final header = ByteData(44);
     
@@ -250,7 +325,7 @@ class RecordingService {
         }
       }
     } catch (e) {
-      _logger.e("Recording: Error during stop", error: e);
+      _logger.e('Recording: Error during stop', error: e);
     }
   }
 

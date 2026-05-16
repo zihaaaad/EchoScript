@@ -1,4 +1,5 @@
 // (c) 2026 Zihad Hasan | EchoScript Intelligence Unit
+// ignore_for_file: unawaited_futures
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter_background_service/flutter_background_service.dart';
@@ -10,6 +11,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../features/history/domain/models/audio_chunk.dart';
 import '../../features/settings/domain/models/app_settings.dart';
 import '../../features/recording/data/repositories/recording_manager.dart';
+import '../../features/recording/data/repositories/isar_transcription_repositories.dart';
 import '../../features/recording/data/datasources/recording_service.dart';
 import '../../features/recording/data/datasources/transcription_service.dart';
 import '../constants/constants.dart';
@@ -48,12 +50,21 @@ void onStart(ServiceInstance service) async {
   const secureStorage = FlutterSecureStorage();
 
   // 2. Dependency Injection
+  final chunkRepo = IsarAudioChunkRepository(isar);
+  final settingsRepo = IsarAppSettingsRepository(isar);
+  
   final recordingService = RecordingService(isar);
   final transcriptionService = TranscriptionService(
-    isar: isar,
+    chunkRepo: chunkRepo,
+    settingsRepo: settingsRepo,
     secureStorage: secureStorage,
   );
   final manager = RecordingManager(isar, recordingService, transcriptionService);
+
+  // Broadcast dB changes to UI Isolate
+  recordingService.onDbChanged.listen((db) {
+    service.invoke('volumeUpdate', {'db': db});
+  });
 
   // 3. Command Listeners
   service.on('startRecording').listen((event) async {
@@ -74,15 +85,15 @@ void onStart(ServiceInstance service) async {
 
   // 4. Single Source of Truth: Event-Driven UI Updates
   // Watch for settings/state changes and update notification IMMEDIATELY
-  isar.appSettings.watchObject(0, fireImmediately: true).listen((settings) {
+  isar.appSettings.watchObject(0, fireImmediately: true).listen((settings) async {
     if (settings == null) return;
     
     final isActive = settings.isRecordingActive;
     
     if (service is AndroidServiceInstance) {
       service.setForegroundNotificationInfo(
-        title: isActive ? "EchoScript: Active" : "EchoScript: Standby",
-        content: isActive ? "Capturing professional intelligence..." : "System ready for capture",
+        title: isActive ? 'EchoScript: Active' : 'EchoScript: Standby',
+        content: isActive ? 'Capturing professional intelligence...' : 'System ready for capture',
       );
     }
     
@@ -105,5 +116,12 @@ void onStart(ServiceInstance service) async {
         'isTranscribing': false,
       });
     }
+  });
+
+  // 6. Periodic Maintenance (Purge old data every hour)
+  Timer.periodic(const Duration(hours: 1), (timer) async {
+    await transcriptionService.purgeOldData();
+    // Also trigger queue processing for any missed/failed chunks
+    await transcriptionService.processQueue();
   });
 }

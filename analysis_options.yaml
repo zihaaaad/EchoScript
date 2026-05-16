@@ -1,5 +1,10 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+
 linter:
   rules:
     - avoid_empty_else
@@ -10,7 +15,6 @@ linter:
     - prefer_final_fields
     - prefer_final_locals
     - unnecessary_await_in_return
-    - unnecessary_imports
     - use_key_in_widget_constructors
     - prefer_is_not_empty
     - annotate_overrides
@@ -40,3 +44,34 @@ linter:
     - unnecessary_this
     - unrelated_type_equality_checks
     - use_rethrow_when_possible
+    - always_declare_return_types
+    - always_require_non_null_named_parameters
+    - avoid_init_to_null
+    - avoid_return_types_on_setters
+    - avoid_shadowing_type_parameters
+    - avoid_types_as_parameter_names
+    - empty_catches
+    - library_private_types_in_public_api
+    - no_duplicate_case_values
+    - null_closures
+    - omit_local_variable_types
+    - prefer_adjacent_string_concatenation
+    - prefer_conditional_assignment
+    - prefer_for_elements_to_map_fromIterable
+    - prefer_foreach
+    - prefer_if_elements_to_conditional_expressions
+    - prefer_void_to_null
+    - recursive_getters
+    - type_annotate_public_apis
+    - unnecessary_brace_in_string_interps
+    - unnecessary_lambdas
+    - unnecessary_null_aware_assignments
+    - unnecessary_overrides
+    - unnecessary_parenthesis
+    - unnecessary_string_escapes
+    - unnecessary_string_interpolations
+    - use_full_hex_values_for_flutter_colors
+    - use_function_type_syntax_for_parameters
+    - use_raw_strings
+    - use_setters_to_change_properties
+    - use_to_and_as_if_applicable

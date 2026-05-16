@@ -5,15 +5,15 @@ class PermissionManager {
   static final Logger _logger = Logger();
 
   static Future<bool> requestPermissions() async {
-    Map<Permission, PermissionStatus> statuses = await [
+    final Map<Permission, PermissionStatus> statuses = await [
       Permission.microphone,
       Permission.notification,
     ].request();
 
-    bool allGranted = statuses.values.every((status) => status.isGranted);
+    final bool allGranted = statuses.values.every((status) => status.isGranted);
     
     if (!allGranted) {
-      _logger.w("Some permissions were denied.");
+      _logger.w('Some permissions were denied.');
     }
     
     // Request to ignore battery optimization

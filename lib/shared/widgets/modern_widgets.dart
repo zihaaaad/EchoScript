@@ -16,8 +16,7 @@ class ModernButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Material(
+  Widget build(BuildContext context) => Material(
       color: isPrimary ? AppTheme.primary : Colors.transparent,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
@@ -50,7 +49,6 @@ class ModernButton extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class GlassCard extends StatelessWidget {
@@ -66,8 +64,7 @@ class GlassCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: padding ?? const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.surface,
@@ -76,5 +73,4 @@ class GlassCard extends StatelessWidget {
       ),
       child: child,
     );
-  }
 }

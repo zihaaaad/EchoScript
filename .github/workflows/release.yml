@@ -1,42 +1,42 @@
-name: Release
+name: EchoScript Release
+
 on:
   push:
     tags:
       - 'v*'
-permissions:
-  contents: write
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
         with:
-          fetch-depth: 0
-      
-      - uses: subosito/flutter-action@v2
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.19.0'
           channel: 'stable'
-          
-      - run: flutter pub get
-      - run: flutter build apk --release
-      
-      - name: Generate Changelog
-        id: changelog
-        run: |
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -z "$PREVIOUS_TAG" ]; then
-            git log --pretty=format:"* %s (%h)" > CHANGELOG.md
-          else
-            git log $PREVIOUS_TAG..HEAD --pretty=format:"* %s (%h)" > CHANGELOG.md
-          fi
-          
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Build App Bundle
+        run: flutter build appbundle --release
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: build/app/outputs/flutter-apk/app-release.apk
-          body_path: CHANGELOG.md
-          generate_release_notes: false
+          files: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

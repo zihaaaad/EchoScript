@@ -1,24 +1,62 @@
-# API Reference: Intelligence Unit & Gemini Integration
+# EchoScript API Reference
 
-EchoScript interacts with the Google Gemini API using a high-efficiency streaming protocol designed for 24/7 autonomous operation.
+This document outlines the primary service interfaces and methods used within the EchoScript engine.
 
-## 1. Authentication Protocol
-- **Storage:** API Keys are stored in OS-level **Secure Storage** (Android Keystore / iOS Keychain).
-- **Retrieval:** The `TranscriptionService` fetches the key just-in-time for each worker thread.
-- **Safety:** Keys are never persisted in plain-text databases or printed in system logs.
+## 1. RecordingService
+`lib/features/recording/data/datasources/recording_service.dart`
 
-## 2. Gemini Files API Integration (Streaming)
-EchoScript uses the `v1beta` Files API to handle large audio files without RAM buffering.
+The core engine responsible for audio capture and WAV file management.
 
-- **Endpoint:** `https://generativelanguage.googleapis.com/upload/v1beta/files`
-- **Method:** `POST` (Multipart Streaming)
-- **Lifecycle:**
-  1. Audio is recorded to a local `.wav` chunk.
-  2. `Dio` streams the file to Gemini's storage.
-  3. A temporary `fileUri` is returned.
-  4. The model processes the `fileUri` reference directly.
+| Method | Returns | Description |
+| :--- | :--- | :--- |
+| `init()` | `Future<void>` | Initializes hardware and audio session configuration. |
+| `start()` | `Future<void>` | Starts the gapless recording engine and rotation timer. |
+| `stop()` | `Future<void>` | Stops recording and finalizes the current audio chunk. |
+| `dispose()` | `void` | Releases hardware resources and cancels timers. |
 
-## 3. Intelligent Rate Limiting
-The system handles `429 (Rate Limit)` and `503 (Overloaded)` errors using exponential backoff:
-- **Retry Schedule:** 1 min, 2 min, 4 min, 8 min... (up to 3 retries).
-- **Persistence:** Retry status is saved in Isar, allowing tasks to resume after service restarts.
+---
+
+## 2. TranscriptionService
+`lib/features/recording/data/datasources/transcription_service.dart`
+
+Manages the AI transcription pipeline and Gemini API interactions.
+
+| Method | Returns | Description |
+| :--- | :--- | :--- |
+| `testApiKey(key, model)` | `Future<bool>` | Validates API key connectivity with a "Ping" prompt. |
+| `processQueue()` | `Future<void>` | Triggers the dynamic worker pool to process pending chunks. |
+| `purgeOldData()` | `Future<void>` | Removes completed transcriptions older than 24 hours. |
+
+---
+
+## 3. RecordingManager
+`lib/features/recording/data/repositories/recording_manager.dart`
+
+Orchestrates the lifecycle between recording and transcription.
+
+| Method | Returns | Description |
+| :--- | :--- | :--- |
+| `startRecording()` | `Future<void>` | Starts recording and attaches the database event listener. |
+| `stopRecording()` | `Future<void>` | Stops recording and runs a final transcription pass. |
+
+---
+
+## 4. PermissionManager
+`lib/core/utils/permission_manager.dart`
+
+Handles cross-platform permission requests.
+
+| Method | Returns | Description |
+| :--- | :--- | :--- |
+| `requestPermissions()` | `Future<bool>` | Requests Microphone, Notification, and Battery Optimization bypass. |
+
+---
+
+## 5. Repositories
+`lib/features/recording/domain/repositories/transcription_repositories.dart`
+
+| Interface | Method | Description |
+| :--- | :--- | :--- |
+| `AudioChunkRepository` | `getPendingChunks(retries)` | Fetches chunks eligible for transcription. |
+| `AudioChunkRepository` | `updateChunk(chunk)` | Persists chunk status/transcription updates. |
+| `AppSettingsRepository` | `getSettings()` | Retrieves current user configuration. |

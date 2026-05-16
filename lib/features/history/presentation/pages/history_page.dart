@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:isar/isar.dart';
 import 'package:intl/intl.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:share_plus/share_plus.dart';
 import '../../../../main.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/export_service.dart';
 import '../../domain/models/audio_chunk.dart';
 
 class HistoryPage extends ConsumerStatefulWidget {
@@ -17,353 +18,336 @@ class HistoryPage extends ConsumerStatefulWidget {
 
 class _HistoryPageState extends ConsumerState<HistoryPage> {
   final _searchController = TextEditingController();
-  String _searchQuery = "";
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final isar = ref.watch(isarProvider);
-    
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: AppTheme.textSecondary),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          "Intelligence Archive",
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+          'Transcript Vault',
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.textPrimary,
+          ),
         ),
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-            child: _buildSearchBar(),
-          ),
-          Expanded(
-            child: StreamBuilder<List<AudioChunk>>(
-              stream: _buildQuery(isar).watch(fireImmediately: true),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-                
-                final chunks = snapshot.data!;
-                if (chunks.isEmpty) {
-                  return _buildEmptyState();
-                }
-
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-                  itemCount: chunks.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 16),
-                  itemBuilder: (context, index) => _BentoHistoryCard(chunk: chunks[index]),
-                );
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: TextField(
+              controller: _searchController,
+              style: GoogleFonts.inter(color: AppTheme.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Search transcripts...',
+                hintStyle: GoogleFonts.inter(color: AppTheme.textSecondary.withValues(alpha: 0.5)),
+                prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary),
+                filled: true,
+                fillColor: AppTheme.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onChanged: (value) {
+                setState(() => _searchQuery = value);
               },
             ),
           ),
-          const SizedBox(height: 20),
+          Expanded(
+            child: _buildTranscriptList(),
+          ),
         ],
       ),
     );
   }
 
-  QueryBuilder<AudioChunk, AudioChunk, QAfterSortBy> _buildQuery(Isar isar) {
-    if (_searchQuery.isEmpty) {
-      return isar.audioChunks.where().sortByStartTimeDesc();
-    }
+  Widget _buildTranscriptList() {
+    final isar = ref.watch(isarProvider);
     
-    return isar.audioChunks
-        .filter()
-        .transcriptionContains(_searchQuery, caseSensitive: false)
-        .sortByStartTimeDesc();
-  }
+    final query = _searchQuery.isEmpty 
+      ? isar.audioChunks.where().sortByStartTimeDesc().build()
+      : isar.audioChunks.filter()
+          .transcriptionWordsElementStartsWith(_searchQuery, caseSensitive: false)
+          .sortByStartTimeDesc()
+          .build();
 
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: TextField(
-        controller: _searchController,
-        onChanged: (val) => setState(() => _searchQuery = val),
-        style: GoogleFonts.inter(color: AppTheme.textPrimary, fontSize: 14),
-        decoration: InputDecoration(
-          icon: const Icon(Icons.search_rounded, color: AppTheme.textSecondary, size: 20),
-          hintText: "Search intelligence...",
-          hintStyle: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 14),
-          border: InputBorder.none,
-          suffixIcon: _searchQuery.isNotEmpty 
-            ? IconButton(
-                icon: const Icon(Icons.close_rounded, size: 18),
-                onPressed: () {
-                  _searchController.clear();
-                  setState(() => _searchQuery = "");
-                },
-              )
-            : null,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              shape: BoxShape.circle,
+    return StreamBuilder<List<AudioChunk>>(
+      stream: query.watch(fireImmediately: true),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        final chunks = snapshot.data ?? [];
+        if (chunks.isEmpty) {
+          return Center(
+            child: Text(
+              'No transcripts found.',
+              style: GoogleFonts.inter(color: AppTheme.textSecondary),
             ),
-            child: Icon(
-              _searchQuery.isEmpty ? Icons.auto_awesome_rounded : Icons.search_off_rounded, 
-              size: 40, 
-              color: AppTheme.textSecondary.withValues(alpha: 0.1)
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            _searchQuery.isEmpty ? "Archive is currently empty" : "No results for \"$_searchQuery\"",
-            style: GoogleFonts.inter(color: AppTheme.textSecondary, fontWeight: FontWeight.w600, fontSize: 14),
-          ),
-        ],
-      ),
-    );
-  }
-}
+          );
+        }
 
-class _BentoHistoryCard extends StatelessWidget {
-  final AudioChunk chunk;
-  const _BentoHistoryCard({required this.chunk});
-
-  @override
-  Widget build(BuildContext context) {
-    final timeStr = DateFormat('HH:mm').format(chunk.startTime);
-    final dateStr = DateFormat('MMM dd, yyyy').format(chunk.startTime);
-    final duration = chunk.endTime != null 
-        ? chunk.endTime!.difference(chunk.startTime).inMinutes 
-        : 0;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _showDetail(context),
-          borderRadius: BorderRadius.circular(24),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        timeStr,
-                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.primary),
-                      ),
-                    ),
-                    _StatusBadge(status: chunk.status),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  dateStr,
-                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
-                ),
-                Text(
-                  "$duration minute intelligence session",
-                  style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
-                ),
-                if (chunk.transcription != null) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppTheme.background.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      chunk.transcription!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        color: AppTheme.textPrimary.withValues(alpha: 0.7),
-                        fontSize: 13,
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showDetail(BuildContext context) {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: "Dismiss",
-      transitionDuration: const Duration(milliseconds: 300),
-      pageBuilder: (context, anim1, anim2) => _DetailView(chunk: chunk),
-      transitionBuilder: (context, anim1, anim2, child) {
-        return SlideTransition(
-          position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(anim1),
-          child: FadeTransition(opacity: anim1, child: child),
+        return ListView.separated(
+          padding: const EdgeInsets.all(20),
+          physics: const BouncingScrollPhysics(),
+          itemCount: chunks.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            return _TranscriptCard(chunk: chunks[index]);
+          },
         );
       },
     );
   }
 }
 
-class _DetailView extends StatelessWidget {
+class _TranscriptCard extends ConsumerWidget {
   final AudioChunk chunk;
-  const _DetailView({required this.chunk});
+  
+  const _TranscriptCard({required this.chunk});
 
   @override
-  Widget build(BuildContext context) {
-    final formattedDate = DateFormat('EEEE, MMM dd, yyyy').format(chunk.startTime);
-    final formattedTime = DateFormat('HH:mm').format(chunk.startTime);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final duration = chunk.endTime != null 
+        ? chunk.endTime!.difference(chunk.startTime)
+        : DateTime.now().difference(chunk.startTime);
+        
+    final isCompleted = chunk.status == ChunkStatus.completed;
 
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close_rounded, color: AppTheme.textSecondary),
-          onPressed: () => Navigator.pop(context),
+    return InkWell(
+      onTap: () {
+        if (isCompleted && chunk.transcription != null) {
+          _showTranscriptDetails(context, chunk);
+        }
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.ios_share_rounded, size: 20, color: AppTheme.primary),
-            onPressed: () {
-              final text = "EchoScript Intelligence Report\n"
-                  "Date: $formattedDate\n"
-                  "Time: $formattedTime\n\n"
-                  "Transcription:\n"
-                  "${chunk.transcription ?? 'No transcription available.'}";
-              // ignore: deprecated_member_use
-              Share.share(text, subject: 'EchoScript Intelligence - $formattedDate');
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 20),
-            Text(
-              formattedDate,
-              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  DateFormat('MMM dd, yyyy • HH:mm').format(chunk.startTime),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                _buildStatusBadge(chunk.status),
+              ],
             ),
             const SizedBox(height: 8),
             Text(
-              formattedTime,
-              style: GoogleFonts.inter(fontSize: 48, fontWeight: FontWeight.w800, color: AppTheme.textPrimary, letterSpacing: -1.5),
+              isCompleted 
+                ? (chunk.transcription ?? 'Empty transcription').trim() 
+                : _getStatusMessage(chunk.status),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: isCompleted ? AppTheme.textPrimary : AppTheme.textSecondary.withValues(alpha: 0.7),
+                height: 1.5,
+              ),
             ),
-            const SizedBox(height: 32),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(32),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.timer_outlined, size: 14, color: AppTheme.textSecondary),
+                const SizedBox(width: 4),
+                Text(
+                  '${duration.inMinutes}m ${duration.inSeconds % 60}s',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                const Spacer(),
+                if (isCompleted)
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.description_outlined, color: AppTheme.primary, size: 16),
-                          const SizedBox(width: 8),
-                          Text(
-                            "TRANSCRIPTION",
-                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.textSecondary, letterSpacing: 1),
-                          ),
-                        ],
+                      IconButton(
+                        icon: const Icon(Icons.share_outlined, size: 18, color: AppTheme.textSecondary),
+                        onPressed: () => ExportService.shareAsTxt(chunk),
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
                       ),
-                      const SizedBox(height: 20),
-                      Text(
-                        chunk.transcription ?? "Recording intelligence is still processing...",
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          height: 1.7,
-                          color: chunk.transcription == null ? AppTheme.textSecondary : AppTheme.textPrimary,
-                        ),
+                      const SizedBox(width: 16),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 18, color: AppTheme.error),
+                        onPressed: () async {
+                          final isar = ref.read(isarProvider);
+                          await isar.writeTxn(() async {
+                            await isar.audioChunks.delete(chunk.id);
+                          });
+                        },
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
                       ),
                     ],
                   ),
-                ),
-              ),
+              ],
             ),
-            const SizedBox(height: 40),
           ],
         ),
       ),
     );
   }
-}
 
-class _StatusBadge extends StatelessWidget {
-  final ChunkStatus status;
-  const _StatusBadge({required this.status});
+  String _getStatusMessage(ChunkStatus status) {
+    switch (status) {
+      case ChunkStatus.recording: return 'Currently recording...';
+      case ChunkStatus.pending: return 'Waiting in queue...';
+      case ChunkStatus.transcribing: return 'AI is transcribing...';
+      case ChunkStatus.failed: return 'Transcription failed (retrying)';
+      case ChunkStatus.completed: return '';
+    }
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    final color = _getStatusColor();
-    return Row(
-      children: [
-        Container(
-          width: 6,
-          height: 6,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  Widget _buildStatusBadge(ChunkStatus status) {
+    Color color;
+    String label;
+    
+    switch (status) {
+      case ChunkStatus.recording:
+        color = AppTheme.error;
+        label = 'RECORDING';
+        break;
+      case ChunkStatus.pending:
+        color = Colors.orange;
+        label = 'PENDING';
+        break;
+      case ChunkStatus.transcribing:
+        color = AppTheme.primary;
+        label = 'PROCESSING';
+        break;
+      case ChunkStatus.completed:
+        color = AppTheme.success;
+        label = 'READY';
+        break;
+      case ChunkStatus.failed:
+        color = AppTheme.error;
+        label = 'ERROR';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          color: color,
         ),
-        const SizedBox(width: 8),
-        Text(
-          status.name.toUpperCase(),
-          style: GoogleFonts.inter(color: color, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 0.5),
-        ),
-      ],
+      ),
     );
   }
 
-  Color _getStatusColor() {
-    switch (status) {
-      case ChunkStatus.completed: return AppTheme.success;
-      case ChunkStatus.failed: return AppTheme.error;
-      case ChunkStatus.transcribing: return Colors.blueAccent;
-      default: return AppTheme.textSecondary;
-    }
+  void _showTranscriptDetails(BuildContext context, AudioChunk chunk) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (_, controller) => Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    DateFormat('MMM dd, HH:mm').format(chunk.startTime),
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.copy_rounded, color: AppTheme.textSecondary),
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: chunk.transcription ?? ''));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Copied to clipboard')),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.picture_as_pdf_outlined, color: AppTheme.textSecondary),
+                        onPressed: () => ExportService.shareAsPdf(chunk),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                controller: controller,
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  chunk.transcription ?? '',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    color: AppTheme.textPrimary,
+                    height: 1.6,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

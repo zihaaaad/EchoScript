@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,11 +21,37 @@ class DashboardPage extends ConsumerStatefulWidget {
 
 class _DashboardPageState extends ConsumerState<DashboardPage> {
   bool _isPermissionGranted = false;
+  double _currentDb = -60.0;
+  StreamSubscription? _statusSubscription;
+  StreamSubscription? _volumeSubscription;
 
   @override
   void initState() {
     super.initState();
     _initPermissions();
+    _listenToBackgroundService();
+  }
+
+  @override
+  void dispose() {
+    _statusSubscription?.cancel();
+    _volumeSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _listenToBackgroundService() {
+    final service = FlutterBackgroundService();
+    _statusSubscription = service.on('statusUpdate').listen((event) {
+      // Handle other status updates if needed
+    });
+
+    _volumeSubscription = service.on('volumeUpdate').listen((event) {
+      if (mounted) {
+        setState(() {
+          _currentDb = (event?['db'] as num?)?.toDouble() ?? -60.0;
+        });
+      }
+    });
   }
 
   Future<void> _initPermissions() async {
@@ -33,8 +60,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       backgroundColor: AppTheme.background,
       body: Stack(
         children: [
@@ -91,10 +117,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         ],
       ),
     );
-  }
 
-  Widget _buildHeader() {
-    return Padding(
+  Widget _buildHeader() => Padding(
       padding: const EdgeInsets.only(top: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -103,7 +127,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "EchoScript",
+                'EchoScript',
                 style: GoogleFonts.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
@@ -112,7 +136,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 ),
               ),
               Text(
-                "v1.0.0+11 • Enterprise",
+                'v1.0.0+11 • Enterprise',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -137,10 +161,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         ],
       ),
     );
-  }
 
-  Widget _buildBentoGrid() {
-    return GridView.count(
+  Widget _buildBentoGrid() => GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
@@ -149,22 +171,22 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       childAspectRatio: 1.1,
       children: [
         const BentoModule(
-          title: "Session Time",
+          title: 'Session Time',
           child: StatusMonitor(),
         ),
         BentoModule(
-          title: "Storage",
+          title: 'Storage',
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(Icons.storage_rounded, color: AppTheme.accent, size: 28),
               const SizedBox(height: 8),
               Text(
-                "2.4 GB",
+                '2.4 GB', // Placeholder: Requires storage_capacity package for real data
                 style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
               ),
               Text(
-                "Available",
+                'Available',
                 style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textSecondary),
               ),
             ],
@@ -172,10 +194,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         ),
       ],
     );
-  }
 
-  Widget _buildRecentActivity() {
-    return Container(
+  Widget _buildRecentActivity() => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -190,44 +210,58 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "Activity Monitor",
+                'Intelligence Spectrum',
                 style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
               ),
-              const Icon(Icons.auto_graph_rounded, color: AppTheme.success, size: 16),
+              const Icon(Icons.waves_rounded, color: AppTheme.primary, size: 16),
             ],
           ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 60,
+            child: LiveAudioVisualizer(currentDb: _currentDb),
+          ),
           const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(7, (index) {
-              final heights = [20.0, 45.0, 30.0, 60.0, 25.0, 50.0, 40.0];
-              return Container(
-                width: 30,
-                height: heights[index],
-                decoration: BoxDecoration(
-                  color: index == 3 ? AppTheme.primary : AppTheme.card,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) {
-              return SizedBox(
-                width: 30,
-                child: Text(
-                  day,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textSecondary),
-                ),
-              );
-            }).toList(),
-          ),
+          _buildDbMeter(),
         ],
       ),
+    );
+
+  Widget _buildDbMeter() {
+    final normalized = ((_currentDb + 60) / 60).clamp(0.0, 1.0);
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Input Gain',
+              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+            ),
+            Text(
+              '${_currentDb.toStringAsFixed(1)} dB',
+              style: GoogleFonts.inter(
+                fontSize: 10, 
+                fontWeight: FontWeight.w800, 
+                color: normalized > 0.8 ? AppTheme.error : AppTheme.primary,
+                fontFeatures: [const FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: normalized,
+            backgroundColor: AppTheme.card,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              normalized > 0.8 ? AppTheme.error : AppTheme.primary,
+            ),
+            minHeight: 4,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -238,8 +272,7 @@ class BentoModule extends StatelessWidget {
   const BentoModule({super.key, required this.title, required this.child});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface,
@@ -257,7 +290,6 @@ class BentoModule extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _CircularButton extends StatelessWidget {
@@ -266,8 +298,7 @@ class _CircularButton extends StatelessWidget {
   const _CircularButton({required this.icon, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
+  Widget build(BuildContext context) => InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
@@ -280,7 +311,6 @@ class _CircularButton extends StatelessWidget {
         child: Icon(icon, size: 20, color: AppTheme.textPrimary),
       ),
     );
-  }
 }
 
 class StatusMonitor extends ConsumerStatefulWidget {
@@ -313,8 +343,7 @@ class _StatusMonitorState extends ConsumerState<StatusMonitor> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<AppSettings?>(
+  Widget build(BuildContext context) => StreamBuilder<AppSettings?>(
       stream: ref.watch(isarProvider).appSettings.watchObject(0, fireImmediately: true),
       builder: (context, snapshot) {
         final settings = snapshot.data;
@@ -358,7 +387,7 @@ class _StatusMonitorState extends ConsumerState<StatusMonitor> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  isActive ? "LIVE" : "IDLE",
+                  isActive ? 'LIVE' : 'IDLE',
                   style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, color: isActive ? AppTheme.error : AppTheme.success),
                 ),
               ],
@@ -367,7 +396,6 @@ class _StatusMonitorState extends ConsumerState<StatusMonitor> {
         );
       },
     );
-  }
 }
 
 class RecordingController extends ConsumerWidget {
@@ -375,8 +403,7 @@ class RecordingController extends ConsumerWidget {
   const RecordingController({super.key, required this.isEnabled});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return StreamBuilder<AppSettings?>(
+  Widget build(BuildContext context, WidgetRef ref) => StreamBuilder<AppSettings?>(
       stream: ref.watch(isarProvider).appSettings.watchObject(0, fireImmediately: true),
       builder: (context, snapshot) {
         final settings = snapshot.data;
@@ -394,9 +421,9 @@ class RecordingController extends ConsumerWidget {
             final service = FlutterBackgroundService();
             if (!isActive) {
               await service.startService();
-              service.invoke("startRecording");
+              service.invoke('startRecording');
             } else {
-              service.invoke("stopRecording");
+              service.invoke('stopRecording');
             }
           } : null,
           child: Container(
@@ -435,6 +462,35 @@ class RecordingController extends ConsumerWidget {
           ),
         );
       },
+    );
+}
+
+class LiveAudioVisualizer extends StatelessWidget {
+  final double currentDb;
+  const LiveAudioVisualizer({super.key, required this.currentDb});
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = ((currentDb + 60) / 60).clamp(0.05, 1.0);
+    
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: List.generate(32, (index) {
+        // Pseudo-random but deterministic animation base
+        final double baseHeight = 0.2 + (math.sin(index * 0.5) * 0.1).abs();
+        final double height = (baseHeight + normalized * 0.8) * 60;
+        
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 100),
+          width: 4,
+          height: height.clamp(4.0, 60.0),
+          decoration: BoxDecoration(
+            color: AppTheme.primary.withValues(alpha: index % 2 == 0 ? 1.0 : 0.4),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        );
+      }),
     );
   }
 }

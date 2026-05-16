@@ -46,13 +46,11 @@ class EchoScriptApp extends StatelessWidget {
   const EchoScriptApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context) => MaterialApp(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
       darkTheme: AppTheme.darkTheme,
       home: const DashboardPage(),
     );
-  }
 }
