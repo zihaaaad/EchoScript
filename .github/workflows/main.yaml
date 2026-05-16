@@ -29,9 +29,12 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Patch Isar Manifest
+      - name: Patch Isar Manifest for AGP 8+ Compatibility
         run: |
-          find ~/.pub-cache -name "AndroidManifest.xml" -path "*/isar_flutter_libs*/android/src/main/AndroidManifest.xml" -exec sed -i 's/package="dev.isar.isar_flutter_libs"//g' {} +
+          for manifest in $(find ~/.pub-cache -name "AndroidManifest.xml" -path "*isar*"); do
+            sed -i 's/package="dev\.isar\.isar_flutter_libs"//g' "$manifest"
+            sed -i 's/<manifest/<manifest xmlns:tools="http:\/\/schemas.android.com\/tools"/' "$manifest"
+          done
 
       - name: Analyze Project
         run: flutter analyze

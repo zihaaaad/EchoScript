@@ -10,6 +10,14 @@ android {
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
+    buildFeatures {
+        buildConfig = true
+        aidl = true
+        renderScript = false
+        resValues = false
+        shaders = false
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
