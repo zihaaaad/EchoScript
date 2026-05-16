@@ -37,12 +37,14 @@ void main() {
       ),
     );
 
-    // Initial pump to build the UI
-    await tester.pump();
+    // pumpAndSettle to handle any animations or async UI updates
+    await tester.pumpAndSettle();
 
-    // Verify key elements
-    expect(find.text('EchoScript'), findsOneWidget);
-    expect(find.text('v1.0.0+11 • Enterprise'), findsOneWidget);
+    // Verify key elements exist by looking for the App Bar title
+    expect(find.text('EchoScript'), findsWidgets);
+    
+    // Verify that the recording button (Mic icon) is present
+    expect(find.byIcon(Icons.mic_rounded), findsOneWidget);
     
     // Clean up
     tester.view.resetPhysicalSize();

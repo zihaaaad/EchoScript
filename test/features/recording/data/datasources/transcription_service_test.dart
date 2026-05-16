@@ -45,7 +45,7 @@ void main() {
     test('testApiKey returns true on success', () async {
       when(() => mockEngine.generateContent(any())).thenAnswer((_) async => 'ok');
 
-      final result = await transcriptionService.testApiKey('fake_key', 'fake_model', mockEngine: mockEngine);
+      final result = await transcriptionService.testApiKey('AIza_fake_key', 'fake_model', mockEngine: mockEngine);
 
       expect(result, isTrue);
     });
@@ -58,7 +58,7 @@ void main() {
       when(() => mockSettingsRepo.getSettings()).thenAnswer((_) async => settings);
 
       // 2. Mock Secure Storage
-      when(() => mockSecureStorage.read(key: 'gemini_api_key')).thenAnswer((_) async => 'fake_api_key');
+      when(() => mockSecureStorage.read(key: 'gemini_api_key')).thenAnswer((_) async => 'AIza_fake_api_key');
 
       // 3. Mock Repositories
       final chunk = AudioChunk()
@@ -92,7 +92,7 @@ void main() {
     test('processQueue handles AI failure with retry', () async {
       final settings = AppSettings()..aiConcurrencyLimit = 1;
       when(() => mockSettingsRepo.getSettings()).thenAnswer((_) async => settings);
-      when(() => mockSecureStorage.read(key: 'gemini_api_key')).thenAnswer((_) async => 'fake_api_key');
+      when(() => mockSecureStorage.read(key: 'gemini_api_key')).thenAnswer((_) async => 'AIza_fake_api_key');
 
       final chunk = AudioChunk()
         ..id = 2
@@ -118,11 +118,11 @@ void main() {
     });
 
     test('purgeOldData calls repository', () async {
-      when(() => mockChunkRepo.purgeCompletedBefore(any())).thenAnswer((_) async => 5);
+      when(() => mockChunkRepo.getChunksOlderThan(any())).thenAnswer((_) async => []);
 
       await transcriptionService.purgeOldData();
 
-      verify(() => mockChunkRepo.purgeCompletedBefore(any())).called(1);
+      verify(() => mockChunkRepo.getChunksOlderThan(any())).called(1);
     });
   });
 }

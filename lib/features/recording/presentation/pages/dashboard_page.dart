@@ -40,18 +40,22 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   }
 
   void _listenToBackgroundService() {
-    final service = FlutterBackgroundService();
-    _statusSubscription = service.on('statusUpdate').listen((event) {
-      // Handle other status updates if needed
-    });
+    try {
+      final service = FlutterBackgroundService();
+      _statusSubscription = service.on('statusUpdate').listen((event) {
+        // Handle other status updates if needed
+      });
 
-    _volumeSubscription = service.on('volumeUpdate').listen((event) {
-      if (mounted) {
-        setState(() {
-          _currentDb = (event?['db'] as num?)?.toDouble() ?? -60.0;
-        });
-      }
-    });
+      _volumeSubscription = service.on('volumeUpdate').listen((event) {
+        if (mounted) {
+          setState(() {
+            _currentDb = (event?['db'] as num?)?.toDouble() ?? -60.0;
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint('Background Service not available on this platform: $e');
+    }
   }
 
   Future<void> _initPermissions() async {
