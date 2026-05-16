@@ -105,8 +105,7 @@ class _DiagnosticsBottomSheet extends StatelessWidget {
   const _DiagnosticsBottomSheet({required this.health});
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -140,7 +139,6 @@ class _DiagnosticsBottomSheet extends StatelessWidget {
         ],
       ),
     );
-  }
 
   Widget _buildPillarRow(BuildContext context, PillarStatus p) {
     final color = _getPillarColor(p.status);
