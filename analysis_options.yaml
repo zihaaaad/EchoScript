@@ -9,7 +9,6 @@ linter:
   rules:
     - avoid_empty_else
     - avoid_print
-    - avoid_relative_import
     - prefer_const_constructors
     - prefer_const_declarations
     - prefer_final_fields
@@ -45,7 +44,6 @@ linter:
     - unrelated_type_equality_checks
     - use_rethrow_when_possible
     - always_declare_return_types
-    - always_require_non_null_named_parameters
     - avoid_init_to_null
     - avoid_return_types_on_setters
     - avoid_shadowing_type_parameters

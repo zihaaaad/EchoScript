@@ -176,19 +176,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   color: AppTheme.textPrimary,
                 ),
               ),
-              _isTesting 
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : TextButton(
-                    onPressed: () => _testConnection(settings),
-                    child: Text(
-                      'Test Connection',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.primary,
-                      ),
+              if (_isTesting) 
+                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              else 
+                TextButton(
+                  onPressed: () => _testConnection(settings),
+                  child: Text(
+                    'Test Connection',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primary,
                     ),
                   ),
+                ),
             ],
           ),
           const SizedBox(height: 8),
@@ -241,7 +242,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: settings.geminiModel,
+            initialValue: settings.geminiModel,
             dropdownColor: AppTheme.surface,
             style: GoogleFonts.inter(color: AppTheme.textPrimary),
             decoration: InputDecoration(
@@ -301,9 +302,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 borderSide: BorderSide.none,
               ),
             ),
-            onChanged: (value) {
-              _updateSettings((s) => s.systemPrompt = value);
-            },
+            onChanged: (value) => _updateSettings((s) => s.systemPrompt = value),
           ),
         ],
       ),
@@ -350,9 +349,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             divisions: 36,
             activeColor: AppTheme.primary,
             inactiveColor: AppTheme.background,
-            onChanged: (value) {
-              _updateSettings((s) => s.audioGainDb = value);
-            },
+            onChanged: (value) => _updateSettings((s) => s.audioGainDb = value),
           ),
         ],
       ),
@@ -399,9 +396,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             divisions: 11, // 5, 10, 15...
             activeColor: AppTheme.accent,
             inactiveColor: AppTheme.background,
-            onChanged: (value) {
-              _updateSettings((s) => s.chunkDurationMinutes = value.toInt());
-            },
+            onChanged: (value) => _updateSettings((s) => s.chunkDurationMinutes = value.toInt()),
           ),
         ],
       ),
@@ -448,9 +443,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             divisions: 4,
             activeColor: AppTheme.primary,
             inactiveColor: AppTheme.background,
-            onChanged: (value) {
-              _updateSettings((s) => s.aiConcurrencyLimit = value.toInt());
-            },
+            onChanged: (value) => _updateSettings((s) => s.aiConcurrencyLimit = value.toInt()),
           ),
         ],
       ),

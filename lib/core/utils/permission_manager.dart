@@ -5,12 +5,12 @@ class PermissionManager {
   static final Logger _logger = Logger();
 
   static Future<bool> requestPermissions() async {
-    final Map<Permission, PermissionStatus> statuses = await [
+    final statuses = await [
       Permission.microphone,
       Permission.notification,
     ].request();
 
-    final bool allGranted = statuses.values.every((status) => status.isGranted);
+    final allGranted = statuses.values.every((status) => status.isGranted);
     
     if (!allGranted) {
       _logger.w('Some permissions were denied.');

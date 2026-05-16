@@ -108,7 +108,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
           padding: const EdgeInsets.all(20),
           physics: const BouncingScrollPhysics(),
           itemCount: chunks.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             return _TranscriptCard(chunk: chunks[index]);
           },
