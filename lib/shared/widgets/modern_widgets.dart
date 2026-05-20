@@ -96,7 +96,7 @@ class _PulseRecordButtonState extends State<PulseRecordButton>
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
-    final size = 120.0;
+    const size = 120.0;
 
     return GestureDetector(
       onTap: widget.onTap,

@@ -4,7 +4,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../features/recording/data/repositories/isar_transcription_repositories.dart';
 import '../../features/recording/domain/repositories/transcription_repositories.dart';
 import '../../features/settings/domain/models/app_settings.dart';
-import '../../features/history/domain/models/audio_chunk.dart';
 import '../constants/constants.dart';
 
 part 'providers.g.dart';
