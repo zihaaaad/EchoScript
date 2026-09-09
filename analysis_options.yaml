@@ -13,6 +13,13 @@ analyzer:
   exclude:
     - "**/*.g.dart"
     - "lib/generated_plugin_registrant.dart"
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
   errors:
     experimental_member_use: ignore
     deprecated_member_use: ignore

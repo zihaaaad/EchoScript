@@ -64,7 +64,7 @@ class DiagnosticService {
       try {
         final url = Uri.parse(
             'https://generativelanguage.googleapis.com/v1beta/models?key=$apiKey');
-        final response = await http.get(url).timeout(const Duration(seconds: 4));
+        final response = await http.get(url).timeout(const Duration(seconds: 6));
         isKeyValid = response.statusCode == 200;
       } catch (_) {
         isKeyValid = false;

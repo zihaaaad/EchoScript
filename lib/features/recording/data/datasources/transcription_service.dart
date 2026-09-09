@@ -23,8 +23,16 @@ class TranscriptionService {
       return false;
     }
 
+    if (await file.length() <= 44) {
+      // Audio file contains no PCM payload (empty recording)
+      chunk.status = 'FAILED';
+      chunk.transcript = '[Error: Audio recording is empty]';
+      await _repository.updateChunk(chunk);
+      return false;
+    }
+
     final settings = await _repository.getSettings();
-    int backoffSeconds = 60; // Start with 1 minute
+    int backoffSeconds = 5; // Adaptive initial backoff for transient issues
 
     for (int attempt = 1; attempt <= AppConstants.maxRetryCount; attempt++) {
       try {
@@ -67,25 +75,33 @@ class TranscriptionService {
 
         return true;
       } catch (e) {
-        print('Error during transcription attempt $attempt: $e');
-        
-        // Check if we can retry (transient network errors or rate limits)
-        final isLastAttempt = attempt == AppConstants.maxRetryCount;
-        
+        final errorStr = e.toString();
+        print('Error during transcription attempt $attempt: $errorStr');
+
+        // Fatal non-retryable errors (authentication, permission, or bad request)
+        final isAuthOrFatalError = errorStr.contains('API Key is not configured') ||
+            errorStr.contains('API_KEY_INVALID') ||
+            errorStr.contains('401') ||
+            errorStr.contains('403') ||
+            errorStr.contains('400');
+
+        final isLastAttempt = attempt == AppConstants.maxRetryCount || isAuthOrFatalError;
+
         if (isLastAttempt) {
           chunk.status = 'FAILED';
           chunk.retryCount = attempt;
+          chunk.transcript ??= '[Error: $errorStr]';
           await _repository.updateChunk(chunk);
           return false;
         }
 
-        // Apply exponential backoff delay
+        // Apply exponential backoff delay for transient errors
         chunk.retryCount = attempt;
         await _repository.updateChunk(chunk);
-        
+
         print('Retrying in $backoffSeconds seconds...');
         await Future.delayed(Duration(seconds: backoffSeconds));
-        backoffSeconds *= 2; // Exponential growth: 60s, 120s, 240s, 480s
+        backoffSeconds = (backoffSeconds * 2).clamp(5, 60); // Growth: 5s, 10s, 20s, 40s, 60s
       }
     }
 

@@ -20,7 +20,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   
   bool _obscureApiKey = true;
   bool _isSaving = false;
+  bool _isInitialConfigLoaded = false;
   
+  double _gainMultiplier = 1.0;
+  int _chunkIntervalMinutes = AppConstants.defaultChunkIntervalMinutes;
+  String _selectedModel = AppConstants.modelFlash;
+
   DiagnosticMetrics? _metrics;
   bool _isLoadingMetrics = false;
 
@@ -41,18 +46,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   void _loadApiKey() {
     final apiKey = ref.read(apiKeyStateProvider);
     apiKey.whenData((val) {
-      if (val != null) {
+      if (val != null && mounted) {
         _apiKeyController.text = val;
       }
     });
   }
 
+  void _initLocalSettings(AppSettings settings) {
+    if (!_isInitialConfigLoaded) {
+      _isInitialConfigLoaded = true;
+      _gainMultiplier = settings.gainMultiplier;
+      _chunkIntervalMinutes = settings.chunkIntervalMinutes;
+      _selectedModel = settings.selectedModel;
+      if (_promptController.text.isEmpty) {
+        _promptController.text = settings.systemPrompt;
+      }
+    }
+  }
+
   Future<void> _loadMetrics() async {
     setState(() => _isLoadingMetrics = true);
     try {
-      final repo = ref.read(transcriptionRepositoryProvider);
-      final secureStorage = ref.read(secureStorageProvider);
-      final diagService = DiagnosticService(repo, secureStorage);
+      final diagService = ref.read(diagnosticServiceProvider);
       final data = await diagService.getMetrics();
       if (mounted) {
         setState(() {
@@ -78,7 +93,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return '${multiplier.toStringAsFixed(1)}x';
   }
 
-  Future<void> _saveAllSettings(AppSettings settings) async {
+  Future<void> _saveAllSettings() async {
     setState(() => _isSaving = true);
     
     // Save API key
@@ -87,9 +102,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     // Save prompt and database settings
     final updated = AppSettings()
       ..id = 0
-      ..gainMultiplier = settings.gainMultiplier
-      ..chunkIntervalMinutes = settings.chunkIntervalMinutes
-      ..selectedModel = settings.selectedModel
+      ..gainMultiplier = _gainMultiplier
+      ..chunkIntervalMinutes = _chunkIntervalMinutes
+      ..selectedModel = _selectedModel
       ..systemPrompt = _promptController.text
       ..isFirstLaunch = false;
 
@@ -117,9 +132,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, stack) => Center(child: Text('Error: $err')),
           data: (settings) {
-            if (_promptController.text.isEmpty && settings.systemPrompt.isNotEmpty) {
-              _promptController.text = settings.systemPrompt;
-            }
+            _initLocalSettings(settings);
 
             return SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
@@ -173,7 +186,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ),
                         const SizedBox(height: 8),
                         DropdownButtonFormField<String>(
-                          value: settings.selectedModel,
+                          value: _selectedModel,
                           decoration: InputDecoration(
                             filled: true,
                             fillColor: Colors.white.withOpacity(0.04),
@@ -195,7 +208,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           ],
                           onChanged: (val) {
                             if (val != null) {
-                              settings.selectedModel = val;
+                              setState(() {
+                                _selectedModel = val;
+                              });
                             }
                           },
                         ),
@@ -220,7 +235,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
                             ),
                             Text(
-                              _getGainDbLabel(settings.gainMultiplier),
+                              _getGainDbLabel(_gainMultiplier),
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
@@ -230,7 +245,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           ],
                         ),
                         Slider(
-                          value: settings.gainMultiplier,
+                          value: _gainMultiplier,
                           min: 0.25,
                           max: 16.0,
                           // Map to specific gain levels
@@ -244,11 +259,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               for (final lvl in levels) {
                                 final diff = (val - lvl).abs();
                                 if (diff < minDiff) {
-                                  minDiff = diff;
-                                  nearest = lvl;
+                                   minDiff = diff;
+                                   nearest = lvl;
                                 }
                               }
-                              settings.gainMultiplier = nearest;
+                              _gainMultiplier = nearest;
                             });
                           },
                         ),
@@ -259,7 +274,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ),
                         const SizedBox(height: 8),
                         DropdownButtonFormField<int>(
-                          value: settings.chunkIntervalMinutes,
+                          value: _chunkIntervalMinutes,
                           decoration: InputDecoration(
                             filled: true,
                             fillColor: Colors.white.withOpacity(0.04),
@@ -278,7 +293,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           onChanged: (val) {
                             if (val != null) {
                               setState(() {
-                                settings.chunkIntervalMinutes = val;
+                                _chunkIntervalMinutes = val;
                               });
                             }
                           },
@@ -342,7 +357,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: _isSaving ? null : () => _saveAllSettings(settings),
+                      onPressed: _isSaving ? null : _saveAllSettings,
                       child: _isSaving
                           ? const CircularProgressIndicator(color: Colors.black)
                           : const Text('SAVE ALL SETTINGS'),

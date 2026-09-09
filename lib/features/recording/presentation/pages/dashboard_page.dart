@@ -54,25 +54,29 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
     // Request permissions before starting
     if (!stateModel.isRecording) {
-      final keyState = ref.read(apiKeyStateProvider);
-      if (keyState.value == null || keyState.value!.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please add your Gemini API Key in Settings first!'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
+      final apiKey = await ref.read(apiKeyStateProvider.future);
+      if (apiKey == null || apiKey.trim().isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please add your Gemini API Key in Settings first!'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
         return;
       }
 
       final permissionsOk = await PermissionManager.requestMandatoryPermissions();
       if (!permissionsOk) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Microphone and Notification permissions are required to record.'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Microphone and Notification permissions are required to record.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
         return;
       }
       

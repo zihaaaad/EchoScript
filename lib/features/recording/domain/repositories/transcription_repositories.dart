@@ -13,6 +13,8 @@ abstract class TranscriptionRepository {
   Future<List<AudioChunk>> getAllChunks();
   Stream<List<AudioChunk>> watchAllChunks();
   Future<List<AudioChunk>> getPendingChunks();
+  Future<void> recoverOrphanedProcessingChunks();
   Future<void> deleteChunk(int id);
   Future<void> clearAllChunks();
 }
+

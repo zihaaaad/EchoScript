@@ -9,6 +9,25 @@ import '../../features/history/domain/models/audio_chunk.dart';
 class ExportService {
   ExportService._();
 
+  /// Sanitizes text to replace special unicode characters with Latin-1 compatible glyphs
+  /// preventing font rendering crashes in default PDF engine fonts.
+  static String sanitizeForPdf(String input) {
+    return input
+        .replaceAll('—', '--')
+        .replaceAll('–', '-')
+        .replaceAll('“', '"')
+        .replaceAll('”', '"')
+        .replaceAll('‘', "'")
+        .replaceAll('’', "'")
+        .replaceAll('…', '...')
+        .replaceAll('•', '*')
+        .replaceAll('·', '-')
+        .replaceAll('«', '"')
+        .replaceAll('»', '"')
+        .replaceAll('\r\n', '\n')
+        .replaceAll('\r', '\n');
+  }
+
   /// Shares the transcription as a UTF-8 formatted .txt file
   static Future<void> shareAsTxt(AudioChunk chunk) async {
     final dateStr = DateFormat('yyyy-MM-dd HH:mm:ss').format(chunk.createdAt);
@@ -37,6 +56,9 @@ ${chunk.transcript ?? ''}
   static Future<void> shareAsPdf(AudioChunk chunk) async {
     final pdf = pw.Document();
     final dateStr = DateFormat('yyyy-MM-dd HH:mm:ss').format(chunk.createdAt);
+    final rawText = chunk.transcript ?? 'No transcription text available.';
+    final sanitizedText = sanitizeForPdf(rawText);
+    final paragraphs = sanitizedText.split('\n\n');
 
     pdf.addPage(
       pw.MultiPage(
@@ -80,11 +102,16 @@ ${chunk.transcript ?? ''}
           ),
           pw.Divider(thickness: 1),
           pw.SizedBox(height: 12),
-          pw.Paragraph(
-            text: chunk.transcript ?? 'No transcription text available.',
-            style: const pw.TextStyle(
-              fontSize: 12,
-              lineSpacing: 2,
+          ...paragraphs.map(
+            (para) => pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 8.0),
+              child: pw.Paragraph(
+                text: para.trim(),
+                style: const pw.TextStyle(
+                  fontSize: 12,
+                  lineSpacing: 2,
+                ),
+              ),
             ),
           ),
         ],

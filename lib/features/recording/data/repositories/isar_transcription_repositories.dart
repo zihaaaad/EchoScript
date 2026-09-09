@@ -75,6 +75,23 @@ class IsarTranscriptionRepository implements TranscriptionRepository {
   }
 
   @override
+  Future<void> recoverOrphanedProcessingChunks() async {
+    final processingChunks = await isar.audioChunks
+        .filter()
+        .statusEqualTo('PROCESSING')
+        .findAll();
+
+    if (processingChunks.isNotEmpty) {
+      await isar.writeTxn(() async {
+        for (final chunk in processingChunks) {
+          chunk.status = 'PENDING';
+          await isar.audioChunks.put(chunk);
+        }
+      });
+    }
+  }
+
+  @override
   Future<void> deleteChunk(int id) async {
     await isar.writeTxn(() async {
       await isar.audioChunks.delete(id);

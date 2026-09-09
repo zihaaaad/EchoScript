@@ -204,8 +204,8 @@ class RecordingService {
       byteData.setUint8(39, 0x61); // a
       byteData.setUint32(40, dataSize, Endian.little);
 
-      // Overwrite the first 44 bytes with correct header
-      final raf = file.openSync(mode: FileMode.write);
+      // Overwrite the first 44 bytes with correct header using FileMode.append (preserves audio sample payload)
+      final raf = file.openSync(mode: FileMode.append);
       raf.setPositionSync(0);
       raf.writeFromSync(byteData.buffer.asUint8List());
       raf.closeSync();

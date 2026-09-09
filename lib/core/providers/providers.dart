@@ -5,6 +5,7 @@ import '../../features/recording/data/repositories/isar_transcription_repositori
 import '../../features/recording/domain/repositories/transcription_repositories.dart';
 import '../../features/settings/domain/models/app_settings.dart';
 import '../constants/constants.dart';
+import '../utils/diagnostic_service.dart';
 
 part 'providers.g.dart';
 
@@ -66,3 +67,17 @@ class ApiKeyState extends _$ApiKeyState {
     });
   }
 }
+
+@riverpod
+DiagnosticService diagnosticService(DiagnosticServiceRef ref) {
+  final repo = ref.watch(transcriptionRepositoryProvider);
+  final secureStorage = ref.watch(secureStorageProvider);
+  return DiagnosticService(repo, secureStorage);
+}
+
+@riverpod
+Future<DiagnosticMetrics> diagnosticMetrics(DiagnosticMetricsRef ref) async {
+  final diag = ref.watch(diagnosticServiceProvider);
+  return await diag.getMetrics();
+}
+

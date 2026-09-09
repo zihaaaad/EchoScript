@@ -54,6 +54,38 @@ final transcriptionRepositoryProvider =
 
 typedef TranscriptionRepositoryRef
     = AutoDisposeProviderRef<TranscriptionRepository>;
+String _$diagnosticServiceHash() => r'a97f179784c8b3f07d9ac11df43236479b1f8074';
+
+/// See also [diagnosticService].
+@ProviderFor(diagnosticService)
+final diagnosticServiceProvider =
+    AutoDisposeProvider<DiagnosticService>.internal(
+  diagnosticService,
+  name: r'diagnosticServiceProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$diagnosticServiceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef DiagnosticServiceRef = AutoDisposeProviderRef<DiagnosticService>;
+String _$diagnosticMetricsHash() => r'4e50440fa20555903b6a28727001509244313344';
+
+/// See also [diagnosticMetrics].
+@ProviderFor(diagnosticMetrics)
+final diagnosticMetricsProvider =
+    AutoDisposeFutureProvider<DiagnosticMetrics>.internal(
+  diagnosticMetrics,
+  name: r'diagnosticMetricsProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$diagnosticMetricsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef DiagnosticMetricsRef = AutoDisposeFutureProviderRef<DiagnosticMetrics>;
 String _$settingsStateHash() => r'22c150295d852676576fd07f2deec4f5421f5dcd';
 
 /// See also [SettingsState].

@@ -76,7 +76,8 @@ class BackgroundServiceUtils {
     final transcriptionService = TranscriptionService(repo, aiEngine);
     final recordingService = RecordingService();
 
-    // 2. State & config cache
+    // 2. State & config cache and chunk recovery
+    await repo.recoverOrphanedProcessingChunks();
     final settings = await repo.getSettings();
     await recordingService.init();
 
